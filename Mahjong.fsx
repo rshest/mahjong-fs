@@ -4,6 +4,44 @@
 #r "System.Xaml"
 
 //============================================================================================
+//  General utils
+//============================================================================================
+let shuffle arr =
+  let a = arr |> Array.copy
+  let rand = new System.Random()
+  let flip i _ =
+    let j = rand.Next(i, Array.length arr)
+    let tmp = a.[i]
+    a.[i] <- a.[j]
+    a.[j] <- tmp
+  a |> Array.iteri flip
+  a
+
+let tryFindLastIndexi f (array : _[]) = 
+  let rec searchFrom n = 
+    if n < 0 then None 
+    elif f n array.[n] then Some n else searchFrom (n - 1)
+  searchFrom (array.Length - 1)
+
+let choosei f (array: _[]) =
+  let res = new System.Collections.Generic.List<_>()
+  for i = 0 to array.Length - 1 do 
+      let x = array.[i] 
+      match f (i, x) with
+      | Some v -> res.Add(v)
+      | None -> ignore()
+  res.ToArray()
+
+let replicate numTimes s = 
+  seq {for i in [1..numTimes] do yield! s}
+
+let rec tryMap maxDepth f arr = 
+  match maxDepth, (f arr) with
+  | 0, _ -> None
+  | _, Some s -> Some s
+  | _, None -> tryMap (maxDepth - 1) f arr
+
+//============================================================================================
 //  UI/Drawing
 //============================================================================================
 open System
@@ -13,16 +51,27 @@ open System.Windows.Shapes
 open System.Windows.Media
 open System.Windows.Media.Imaging
 
-let c = new Canvas(Margin = new Thickness(20.,40.,10.,10.))
-let w = new Window(Content = c, Width = 1024.0, Height = 768.0,Background = Brushes.Gray)
+let c = new Canvas(Margin = new Thickness(30.,50.,30.,50.))
+let g = new StackPanel(Orientation=Orientation.Vertical)
+
+let w = new Window(Content = g, Width = 1024.0, Height = 768.0,Background = Brushes.Gray)
 w.Show()
 
-let spriteBrush imgFile nCols nRows id =
-    let imgSource = new BitmapImage(new Uri(imgFile))
-    let cardW, cardH = 1./(float nCols), 1./(float nRows)
-    let viewBox = new Rect(cardW*(float (id % 12)), cardH*(float (id / 12)), cardW, cardH)
-    let brush = new ImageBrush(ImageSource = imgSource, Viewbox = viewBox)
-    brush
+let s = new StackPanel(Height=30., Orientation=Orientation.Horizontal, 
+                       HorizontalAlignment=HorizontalAlignment.Center);
+s.Children.Add(new Button(Content="Turtle"));
+s.Children.Add(new Button(Content="Dragon"));
+s.Children.Add(new Button(Content="Spider"));
+s.Children.Add(new Button(Content="Crab", Margin=new Thickness(0.,0.,5.,0.)));
+s.Children.Add(new Button(Content="Show Free"));
+s.Children.Add(new Button(Content="Show Matches", Margin=new Thickness(0.,0.,5.,0.)));
+s.Children.Add(new Button(Content="Undo", Margin=new Thickness(0.,0.,5.,0.)));
+s.Children.Add(new Button(Content="Shuffle", Margin=new Thickness(0.,0.,5.,0.)));
+s.Children.Add(new Button(Content="Hide Level"));
+s.Children.Add(new Button(Content="Unhide Level"));
+
+g.Children.Add(s);
+g.Children.Add(c);
 
 type SpriteAtlas = { 
   File: string;
@@ -33,43 +82,66 @@ type SpriteAtlas = {
   FrameHeight: float; 
 }
 
+let spriteBrush atlas id =
+  let imgFile = __SOURCE_DIRECTORY__ + "/" + atlas.File
+  let imgSource = new BitmapImage(new Uri(imgFile))
+  let cardW, cardH = 1./(float atlas.Cols), 1./(float atlas.Rows)
+  let viewBox = new Rect(cardW*(float (id % atlas.Cols)), cardH*(float (id / atlas.Cols)), cardW, cardH)
+  new ImageBrush(ImageSource = imgSource, Viewbox = viewBox)
+
 let bgAtlas = {
   File = "brick.png";
   Cols = 2; Rows = 1; Frames = 2;
   FrameWidth = 74.; FrameHeight = 85.;
 }
 
-let cardAtlas = {
+let fgAtlas = {
   File = "cards.png";
-  Cols = 12; Rows = 8; Frames = 70;
+  Cols = 12; Rows = 8; Frames = 90;
   FrameWidth = 64.; FrameHeight = 60.;
 }
 
-let cellSz = 64., 75.
-let levShift = -7., -10.
-
 let createBrick x y id =
-  let bgBrush = spriteBrush (__SOURCE_DIRECTORY__ + "/" + "brick.png") 2 1 0
-  let bg = new Rectangle(Width=74., Height=85., Fill = bgBrush)
+  let bg = new Rectangle(Width=bgAtlas.FrameWidth, Height=bgAtlas.FrameHeight)
   Canvas.SetLeft(bg, x)
   Canvas.SetTop(bg, y)   
-  
-  let imgBrush = spriteBrush (__SOURCE_DIRECTORY__ + "/" + "cards.png") 12 8 id
-  let fg = new Rectangle(Width=64., Height=60., Fill = imgBrush)
+  let fg = new Rectangle(Width=fgAtlas.FrameWidth, Height=fgAtlas.FrameHeight)
   Canvas.SetLeft(fg, x + 2.)
   Canvas.SetTop(fg, y + 10.)   
   (bg, fg)
 
-let clear() = c.Children.Clear()
+type CardState =
+  | Visible
+  | Selected
+  | Hidden
+
+let updateCardVisual parts id state = 
+  let (bg:Rectangle), (fg:Rectangle) = parts
+  let spriteID = if state = Selected then 1 else 0
+  let selBrush = spriteBrush bgAtlas spriteID
+  match state with
+  | Hidden -> bg.Fill <- null; fg.Fill <- null
+  | _ -> bg.Fill <- selBrush
+  let imgBrush = 
+    match state with
+    | Hidden -> null
+    | _ -> spriteBrush fgAtlas id
+  fg.Fill <- imgBrush
+
+let cellSz = 64., 75.
+let levShift = -7., -10.
 
 let cellCoord (i, j, level) =
-  let x = (float i)*(fst cellSz)*0.5 + (float level)*(fst levShift)
-  let y = (float j)*(snd cellSz)*0.5 + (float level)*(snd levShift)
-  (x, y, fst cellSz - fst levShift, snd cellSz - snd levShift)
+  let lx, ly = levShift
+  let x = (float i)*(fst cellSz)*0.5 + (float level)*lx
+  let y = (float j)*(snd cellSz)*0.5 + (float level)*ly
+  (x, y, fst cellSz - lx, snd cellSz - ly)
 
 let createCell (id, (i, j, level)) =
   let (x, y, _, _) = cellCoord(i, j, level)
-  createBrick x y id
+  let parts = createBrick x y id
+  updateCardVisual parts id Visible
+  parts
 
 //============================================================================================
 //  Layouts  
@@ -150,6 +222,8 @@ let spider ="
  3322        2222        2233
 "
 
+let layouts = [turtle; dragon; crab; spider]
+
 let parseLayout (str:string) = 
   let charToHeight ch = 
     match Int32.TryParse(string ch) with
@@ -176,59 +250,103 @@ let layoutToCellCoord (layout) =
           shifts |> Array.iter (fun (x, y) -> l.[row + x].[col + y] <- level - 1) 
   }
 
+let layout = 
+  let l = layouts |> List.toArray |> shuffle 
+  l.[0]
+
 let cellCoords = 
-  turtle 
+  layout
   |> parseLayout 
   |> layoutToCellCoord 
   |> Seq.sortBy (fun (x, y, h) -> x + y + h*1000) 
   |> Seq.toArray
 
 //============================================================================================
-//  Generic utils
+//  CARD UTILS
 //============================================================================================
-let shuffle arr =
-  let a = arr |> Array.copy
-  let rand = new System.Random()
-  let flip i _ =
-    let j = rand.Next(i, Array.length arr)
-    let tmp = a.[i]
-    a.[i] <- a.[j]
-    a.[j] <- tmp
-  a |> Array.iteri flip
-  a
+let isFree coords (states:CardState[]) cardID = 
+  //  create hash table with coordinates to quickly find neighbors
+  let m = System.Collections.Generic.Dictionary()
+  let addCell i (x, y, h) = 
+    [|(0, 0); (1, 0); (0, 1); (1, 1)|]
+    |> Array.iter (fun (dx, dy) -> m.Add((x + dx, y + dy, h), i))
+  coords |> Array.iteri addCell
+  let (x, y, h) = coords.[cardID]
+  let isBlockedBy offsets = 
+    let isBlocking (dx, dy, dh) =
+      let key = (x + dx, y + dy, h + dh)
+      if m.ContainsKey key then states.[m.[key]] <> Hidden else false
+    offsets |> List.exists isBlocking
+  let top = [(0, 0, 1); (0, 1, 1); (1, 0, 1); (1, 1, 1)]
+  let left = [(-1, 0, 0); (-1, 1, 0)]
+  let right = [(2, 0, 0); (2, 1, 0)]
+  not (isBlockedBy top || (isBlockedBy left && isBlockedBy right))
 
-let tryFindLastIndexi f (array : _[]) = 
-  let rec searchFrom n = 
-    if n < 0 then None 
-    elif f n array.[n] then Some n else searchFrom (n - 1)
-  searchFrom (array.Length - 1)
 
-let choosei f (array: _[]) =
-  let res = new System.Collections.Generic.List<_>()
-  for i = 0 to array.Length - 1 do 
-      let x = array.[i] 
-      match f (i, x) with
-      | Some v -> res.Add(v)
-      | None -> ignore()
-  res.ToArray()
+let getFree coords (states:CardState[]) =
+  [0 .. cellCoords.Length - 1]
+  |> List.filter (fun i -> states.[i] <> Hidden)
+  |> List.filter (isFree coords states)
 
+let getMatches (ids:int[]) coords states = 
+  let free = getFree coords states 
+  free
+  |> Set.ofList 
+  |> Set.filter (fun i -> 
+    (List.sumBy (function 
+      | a when ids.[a] = ids.[i] -> 1 
+      | _ -> 0) free) > 1)
+  |> Seq.toList
+
+let createRandomOrder types =
+  types
+  |> replicate 4
+  |> Seq.toArray
+  |> shuffle
+
+let tryCreateSolvableOrder (coords:(int*int*int)[]) types = 
+  let s = seq { 
+    let states = [|for x in 1 .. coords.Length do yield Visible|]    
+    for c in (replicate 2 types) do
+      let nextFree = 
+        [0..(coords.Length - 1)]
+        |> List.filter (fun x -> states.[x] = Visible)
+        |> List.filter (isFree coords states)
+        |> List.toArray
+        |> shuffle
+        |> Seq.truncate 2
+        |> Seq.map (fun x -> (x, c))
+      nextFree |> Seq.iteri (fun i (x, c) -> states.[x] <- Hidden)
+      yield! nextFree
+  } 
+  let ids = s |> Seq.sortBy fst |> Seq.map snd |> Seq.toArray
+  let numCards = (Seq.length types)*2
+  if Array.length ids < numCards then None else Some ids
+
+let shuffleVisible (ids:int[]) states =
+  let visibleIdx = states |> choosei (function | idx, Visible -> Some idx | _ -> None)
+  visibleIdx
+  |> Array.map (fun idx -> ids.[idx])
+  |> shuffle
+  |> Array.iteri (fun i id -> 
+    let idx = visibleIdx.[i]
+    ids.[idx] <- id)
 //============================================================================================
 //  MUTABLE STATE
 //============================================================================================
-type CardState =
-  | Visible
-  | Selected
-  | Hidden
-
 let cardStates = [|for x in 1 .. cellCoords.Length do yield Visible|]
 let mutable curSelected:int option = None
 
-let cardIDs = 
-  let c1 = [|1..70|] |> shuffle 
-  let c2 = c1.[1 .. (Array.length cellCoords)/4]
-  c2 |> Array.append c2 |> Array.append c2 |> Array.append c2 |> shuffle
+let cardTypes = 
+  [|1..fgAtlas.Frames|] 
+  |> shuffle 
+  |> Seq.truncate ((Array.length cellCoords)/4)
 
-clear()
+let cardIDs = 
+  match (cardTypes |> tryMap 32 (tryCreateSolvableOrder cellCoords)) with
+  | Some s -> s
+  | None -> MessageBox.Show "Not possible to create solvable position!" |> ignore; Array.empty
+
 let cardParts = 
   cellCoords
   |> Array.zip cardIDs
@@ -237,63 +355,15 @@ let cardParts =
 cardParts 
   |> Array.iter (fun (bg, fg) -> c.Children.Add(bg) |> ignore; c.Children.Add(fg) |> ignore)
 
+let updateCardVisuals () =
+  cardStates |> Array.iteri (fun i state -> updateCardVisual cardParts.[i] cardIDs.[i] state)
+  
+let setCardState state idx =
+  cardStates.[idx] <- state
+  updateCardVisual cardParts.[idx] cardIDs.[idx] state
 
-let isFree cardID = 
-  let m = System.Collections.Generic.Dictionary()
-  let addCell i (x, y, h) = 
-    [|(0, 0); (1, 0); (0, 1); (1, 1)|]
-    |> Array.iter (fun (dx, dy) -> m.Add((x + dx, y + dy, h), i))
-  cellCoords |> Array.iteri addCell
-  let (x, y, h) = cellCoords.[cardID]
-  let isBlockedBy offsets = 
-    let isBlocking (dx, dy, dh) =
-      let key = (x + dx, y + dy, h + dh)
-      if m.ContainsKey key then cardStates.[m.[key]] <> Hidden else false
-    offsets |> List.exists isBlocking
-  let top = [(0, 0, 1); (0, 1, 1); (1, 0, 1); (1, 1, 1)]
-  let left = [(-1, 0, 0); (-1, 1, 0)]
-  let right = [(2, 0, 0); (2, 1, 0)]
-  not (isBlockedBy top || (isBlockedBy left && isBlockedBy right)) 
-
-let setCardState state cellID =
-  cardStates.[cellID] <- state
-  let spriteID = if state = Selected then 1 else 0
-  let selBrush = spriteBrush (__SOURCE_DIRECTORY__ + "/brick.png") 2 1 spriteID
-  match state with
-  | Hidden -> (fst cardParts.[cellID]).Fill <- null; (snd cardParts.[cellID]).Fill <- null
-  | _ -> (fst cardParts.[cellID]).Fill <- selBrush
-
-let getFree () =
-  [0 .. cellCoords.Length - 1]
-  |> List.filter (fun i -> cardStates.[i] <> Hidden)
-  |> List.filter isFree
-
-let getMatches () = 
-  let free = getFree () 
-  free
-  |> Set.ofList 
-  |> Set.filter (fun i -> 
-    (List.sumBy (function 
-      | a when cardIDs.[a] = cardIDs.[i] -> 1 
-      | _ -> 0) free) > 1)
-  |> Seq.toList
-
-let showFree = getFree >> List.iter (setCardState Selected)
-let showMatches = getMatches >> List.iter (setCardState Selected)
-
-let shuffleRemaining () =
-  let visibleIdx = cardStates |> choosei (function | idx, Visible -> Some idx | _ -> None)
-  visibleIdx
-  |> Array.map (fun idx -> cardIDs.[idx])
-  |> shuffle
-  |> Array.iteri (fun i id -> 
-    let idx = visibleIdx.[i]
-    let imgBrush = 
-      match cardStates.[idx] with
-      | Hidden -> null
-      | _ -> spriteBrush (__SOURCE_DIRECTORY__ + "/" + "cards.png") 12 8 id
-    (snd cardParts.[idx]).Fill <- imgBrush
-    cardIDs.[idx] <- id)
+let showFree () = getFree cellCoords cardStates |> List.iter (setCardState Selected)
+let showMatches () = getMatches cardIDs cellCoords cardStates |> List.iter (setCardState Selected)
 
 let pickCell mx my = 
     cellCoords 
@@ -303,7 +373,7 @@ let pickCell mx my =
 
 let handleClick (mx, my) = 
   let cell = match pickCell mx my with
-             | Some cellIdx when isFree cellIdx -> Some cellIdx
+             | Some cellIdx when (isFree cellCoords cardStates cellIdx) -> Some cellIdx
              | _ -> None
   let unselectAll () = 
     curSelected <- None
@@ -316,11 +386,13 @@ let handleClick (mx, my) =
       unselectAll (); setCardState Hidden c; setCardState Hidden s;
       if (cardStates |> Array.forall (fun st -> st = Hidden)) then 
         MessageBox.Show "Amazing, you've won in this impossible game!" |> ignore
-      elif (getMatches().Length = 0) then 
+      elif ((getMatches cardIDs cellCoords cardStates).Length = 0) then 
         MessageBox.Show "No more possible moves. You've lost, sorry" |> ignore
-        shuffleRemaining()
+        shuffleVisible cardIDs cardStates
+        updateCardVisuals()
   | Some c, None -> setCardState Selected c; curSelected <- Some(c)
   | _, _ -> unselectAll ()
+
 
 let events = 
   w.MouseDown
