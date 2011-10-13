@@ -2,6 +2,7 @@
 #r "PresentationCore"
 #r "PresentationFramework"
 #r "System.Xaml"
+#time 
 
 //============================================================================================
 //  General utils
@@ -57,18 +58,30 @@ let g = new StackPanel(Orientation=Orientation.Vertical)
 let w = new Window(Content = g, Width = 1024.0, Height = 768.0,Background = Brushes.Gray)
 w.Show()
 
-let s = new StackPanel(Height=30., Orientation=Orientation.Horizontal, 
-                       HorizontalAlignment=HorizontalAlignment.Center);
-s.Children.Add(new Button(Content="Turtle"));
-s.Children.Add(new Button(Content="Dragon"));
-s.Children.Add(new Button(Content="Spider"));
-s.Children.Add(new Button(Content="Crab", Margin=new Thickness(0.,0.,5.,0.)));
-s.Children.Add(new Button(Content="Show Free"));
-s.Children.Add(new Button(Content="Show Matches", Margin=new Thickness(0.,0.,5.,0.)));
-s.Children.Add(new Button(Content="Undo", Margin=new Thickness(0.,0.,5.,0.)));
-s.Children.Add(new Button(Content="Shuffle", Margin=new Thickness(0.,0.,5.,0.)));
-s.Children.Add(new Button(Content="Hide Level"));
-s.Children.Add(new Button(Content="Unhide Level"));
+type Control =
+  | MenuItem of string
+
+let s = new Menu();
+let mitem = new MenuItem(Header="Turtle")
+s.Items.Add(mitem);
+s.Items.Add(new MenuItem(Header="Dragon"))
+s.Items.Add(new MenuItem(Header="Spider"))
+s.Items.Add(new MenuItem(Header="Crab"))
+
+let menuFree = new MenuItem(Header="Show Free")
+s.Items.Add(menuFree)
+
+let menuMatches = new MenuItem(Header="Show Matches")
+s.Items.Add(menuMatches)
+
+let menuUndo = new MenuItem(Header="Undo")
+s.Items.Add(menuUndo)
+
+let menuShuffle = new MenuItem(Header="Shuffle")
+s.Items.Add(menuShuffle)
+
+s.Items.Add(new MenuItem(Header="Hide Level"))
+s.Items.Add(new MenuItem(Header="Unhide Level"));
 
 g.Children.Add(s);
 g.Children.Add(c);
@@ -97,7 +110,7 @@ let bgAtlas = {
 
 let fgAtlas = {
   File = "cards.png";
-  Cols = 12; Rows = 8; Frames = 90;
+  Cols = 12; Rows = 8; Frames = 91;
   FrameWidth = 64.; FrameHeight = 60.;
 }
 
@@ -222,9 +235,9 @@ let spider ="
  3322        2222        2233
 "
 
-let layouts = [turtle; dragon; crab; spider]
+let layouts = [|turtle; dragon; crab; spider|]
 
-let parseLayout (str:string) = 
+let parseLayout (str:string) =   
   let charToHeight ch = 
     match Int32.TryParse(string ch) with
     | (true, n) -> n
@@ -232,15 +245,17 @@ let parseLayout (str:string) =
   let strToRow (s:string) =
     s.TrimEnd(' ').ToCharArray()
     |> Array.map charToHeight 
-  str.Split('\n') 
-  |> Array.map strToRow
-  |> Array.filter (fun r -> r.Length <> 0)
- 
-let layoutToCellCoord (layout) = 
-  let maxLevel = layout |> Array.maxBy Array.max |> Array.max
+  let layout = 
+    str.Split('\n') 
+    |> Array.map strToRow
+    |> Array.filter (fun r -> r.Length <> 0)
+  let maxLevel = 
+    layout 
+    |> Array.maxBy Array.max 
+    |> Array.max
   seq {
     let l = Array.copy layout
-    let shifts = [|(0, 0); (1, 0); (0, 1); (1, 1)|]
+    let shifts = [|0, 0; 1, 0; 0, 1; 1, 1|]
     for level in maxLevel .. -1 .. 1 do
       for row in 0 .. layout.Length - 2 do
         for col in 0 .. layout.[row].Length - 2 do
@@ -248,43 +263,34 @@ let layoutToCellCoord (layout) =
         if isBlock then
           yield (col, row, level)
           shifts |> Array.iter (fun (x, y) -> l.[row + x].[col + y] <- level - 1) 
-  }
+  } |> Seq.toArray
 
-let layout = 
-  let l = layouts |> List.toArray |> shuffle 
-  l.[0]
-
-let cellCoords = 
-  layout
-  |> parseLayout 
-  |> layoutToCellCoord 
-  |> Seq.sortBy (fun (x, y, h) -> x + y + h*1000) 
-  |> Seq.toArray
 
 //============================================================================================
 //  CARD UTILS
 //============================================================================================
-let isFree coords (states:CardState[]) cardID = 
+let isFree coords = 
   //  create hash table with coordinates to quickly find neighbors
   let m = System.Collections.Generic.Dictionary()
   let addCell i (x, y, h) = 
-    [|(0, 0); (1, 0); (0, 1); (1, 1)|]
+    [|0, 0; 1, 0; 0, 1; 1, 1|]
     |> Array.iter (fun (dx, dy) -> m.Add((x + dx, y + dy, h), i))
   coords |> Array.iteri addCell
-  let (x, y, h) = coords.[cardID]
-  let isBlockedBy offsets = 
-    let isBlocking (dx, dy, dh) =
-      let key = (x + dx, y + dy, h + dh)
-      if m.ContainsKey key then states.[m.[key]] <> Hidden else false
-    offsets |> List.exists isBlocking
-  let top = [(0, 0, 1); (0, 1, 1); (1, 0, 1); (1, 1, 1)]
-  let left = [(-1, 0, 0); (-1, 1, 0)]
-  let right = [(2, 0, 0); (2, 1, 0)]
-  not (isBlockedBy top || (isBlockedBy left && isBlockedBy right))
-
+  //  return function which checks if given card is free (using the cached hash table)
+  fun (states:CardState[]) cardID ->
+    let (x, y, h) = coords.[cardID]
+    let isBlockedBy offsets = 
+      let isBlocking (dx, dy, dh) =
+        let key = (x + dx, y + dy, h + dh)
+        if m.ContainsKey key then states.[m.[key]] <> Hidden else false
+      offsets |> List.exists isBlocking
+    let top = [0, 0, 1; 0, 1, 1; 1, 0, 1; 1, 1, 1]
+    let left = [-1, 0, 0; -1, 1, 0]
+    let right = [2, 0, 0; 2, 1, 0]
+    not (isBlockedBy top || (isBlockedBy left && isBlockedBy right))
 
 let getFree coords (states:CardState[]) =
-  [0 .. cellCoords.Length - 1]
+  [0 .. states.Length - 1]
   |> List.filter (fun i -> states.[i] <> Hidden)
   |> List.filter (isFree coords states)
 
@@ -298,20 +304,26 @@ let getMatches (ids:int[]) coords states =
       | _ -> 0) free) > 1)
   |> Seq.toList
 
-let createRandomOrder types =
+let arrangeRandom types =
   types
   |> replicate 4
   |> Seq.toArray
   |> shuffle
 
-let tryCreateSolvableOrder (coords:(int*int*int)[]) types = 
+let tryArrangeSolvable (coords:(int*int*int)[]) (cardTypes:int[]) = 
+  let cardPairTypes =
+    cardTypes
+    |> Array.sort
+    |> choosei (function | i, x when i%2 = 0 -> Some x | _ -> None)
+    |> shuffle
+  let isFree' = isFree coords
   let s = seq { 
     let states = [|for x in 1 .. coords.Length do yield Visible|]    
-    for c in (replicate 2 types) do
+    for c in cardPairTypes do
       let nextFree = 
         [0..(coords.Length - 1)]
         |> List.filter (fun x -> states.[x] = Visible)
-        |> List.filter (isFree coords states)
+        |> List.filter (isFree' states)
         |> List.toArray
         |> shuffle
         |> Seq.truncate 2
@@ -319,36 +331,51 @@ let tryCreateSolvableOrder (coords:(int*int*int)[]) types =
       nextFree |> Seq.iteri (fun i (x, c) -> states.[x] <- Hidden)
       yield! nextFree
   } 
-  let ids = s |> Seq.sortBy fst |> Seq.map snd |> Seq.toArray
-  let numCards = (Seq.length types)*2
-  if Array.length ids < numCards then None else Some ids
+  let ids = s |> Seq.toArray |> Array.sortBy fst |> Array.map snd 
+  let numCards = Seq.length cardTypes
+  if ids.Length <> numCards then None else Some ids
 
-let shuffleVisible (ids:int[]) states =
-  let visibleIdx = states |> choosei (function | idx, Visible -> Some idx | _ -> None)
-  visibleIdx
-  |> Array.map (fun idx -> ids.[idx])
-  |> shuffle
-  |> Array.iteri (fun i id -> 
-    let idx = visibleIdx.[i]
-    ids.[idx] <- id)
+
+let shuffleVisible coords (ids:int[]) (states:CardState[]) =
+  let shuffled = 
+    ids
+    |> choosei (function | i, id when states.[i] = Visible -> Some id | _ -> None)
+    |> tryMap 32 (tryArrangeSolvable coords)
+  match shuffled with
+  | Some s -> 
+    ids 
+    |> Array.zip3 states [|0..(states.Length - 1)|] 
+    |> Array.filter (fun (st, _, _) -> st = Visible)
+    |> Array.iteri (fun i (_, idx, _) -> ids.[idx] <- s.[i])
+  | None -> MessageBox.Show "Not possible to create solvable position!" |> ignore
+  
 //============================================================================================
 //  MUTABLE STATE
 //============================================================================================
-let cardStates = [|for x in 1 .. cellCoords.Length do yield Visible|]
-let mutable curSelected:int option = None
+let cardCoords = 
+  let l = layouts |> shuffle 
+  l.[0]
+  |> parseLayout 
+  |> Array.sortBy (fun (x, y, h) -> x + y + h*1000) 
 
-let cardTypes = 
-  [|1..fgAtlas.Frames|] 
-  |> shuffle 
-  |> Seq.truncate ((Array.length cellCoords)/4)
+let cardStates = [|for x in 1 .. cardCoords.Length do yield Visible|]
+let mutable curSelected:int option = None
+let mutable moves:int list = []
 
 let cardIDs = 
-  match (cardTypes |> tryMap 32 (tryCreateSolvableOrder cellCoords)) with
+  let cardTypes = 
+    [|1..fgAtlas.Frames|] 
+    |> shuffle 
+    |> Seq.truncate ((Array.length cardCoords)/4)
+    |> replicate 4
+    |> Seq.toArray
+    |> tryMap 32 (tryArrangeSolvable cardCoords)
+  match cardTypes with
   | Some s -> s
   | None -> MessageBox.Show "Not possible to create solvable position!" |> ignore; Array.empty
 
 let cardParts = 
-  cellCoords
+  cardCoords
   |> Array.zip cardIDs
   |> Array.map createCell
 
@@ -362,33 +389,40 @@ let setCardState state idx =
   cardStates.[idx] <- state
   updateCardVisual cardParts.[idx] cardIDs.[idx] state
 
-let showFree () = getFree cellCoords cardStates |> List.iter (setCardState Selected)
-let showMatches () = getMatches cardIDs cellCoords cardStates |> List.iter (setCardState Selected)
+let undoMove () = 
+  match moves with
+  | a::b::rest -> moves <- rest; setCardState Visible a; setCardState Visible b;
+  | _ -> ()
+
+let showFree () = getFree cardCoords cardStates |> List.iter (setCardState Selected)
+let showMatches () = getMatches cardIDs cardCoords cardStates |> List.iter (setCardState Selected)
 
 let pickCell mx my = 
-    cellCoords 
+    cardCoords 
     |> Array.map cellCoord 
     |> tryFindLastIndexi (fun n (x, y, w, h) -> 
       cardStates.[n] <> Hidden && mx > x && my > y && mx < x + w && my < y + h)
 
-let handleClick (mx, my) = 
-  let cell = match pickCell mx my with
-             | Some cellIdx when (isFree cellCoords cardStates cellIdx) -> Some cellIdx
-             | _ -> None
-  let unselectAll () = 
+let unselectAll () = 
     curSelected <- None
-    [|0 .. cellCoords.Length - 1|] 
+    [|0 .. cardCoords.Length - 1|] 
     |> Array.filter (fun i -> cardStates.[i] <> Hidden) 
     |> Array.iter (setCardState Visible)
+
+let handleClick (mx, my) = 
+  let cell = match pickCell mx my with
+             | Some cellIdx when (isFree cardCoords cardStates cellIdx) -> Some cellIdx
+             | _ -> None
   match cell, curSelected with
   | Some c, Some s when c = s -> unselectAll ()
   | Some c, Some s when cardIDs.[c] = cardIDs.[s] -> 
-      unselectAll (); setCardState Hidden c; setCardState Hidden s;
+      unselectAll (); setCardState Hidden c; setCardState Hidden s; moves <- c::s::moves;
       if (cardStates |> Array.forall (fun st -> st = Hidden)) then 
         MessageBox.Show "Amazing, you've won in this impossible game!" |> ignore
-      elif ((getMatches cardIDs cellCoords cardStates).Length = 0) then 
+        // start the new game
+      elif ((getMatches cardIDs cardCoords cardStates).Length = 0) then 
         MessageBox.Show "No more possible moves. You've lost, sorry" |> ignore
-        shuffleVisible cardIDs cardStates
+        shuffleVisible cardCoords cardIDs cardStates
         updateCardVisuals()
   | Some c, None -> setCardState Selected c; curSelected <- Some(c)
   | _, _ -> unselectAll ()
@@ -401,3 +435,8 @@ let events =
   |> Event.map (fun mi -> (mi.GetPosition(c).X, mi.GetPosition(c).Y))
   |> Event.add handleClick
  
+
+menuUndo.Click.Add(fun _ -> undoMove())
+menuShuffle.Click.Add(fun _ -> shuffleVisible cardCoords cardIDs cardStates; updateCardVisuals())
+menuFree.Click.Add(fun _ -> showFree())
+menuMatches.Click.Add(fun _ -> showMatches())
