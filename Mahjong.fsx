@@ -138,8 +138,12 @@ let createCell (id, (i, j, level)) =
 //  Layouts  
 //============================================================================================
 let layouts = 
-  File.ReadAllLines(__SOURCE_DIRECTORY__ + "\layouts.txt")
-  //|> Array.fold (fun acc (elem:string) -> if elem.StartsWith("-")
+  seq {
+      use sr = new StreamReader(__SOURCE_DIRECTORY__ + "\layouts.txt")
+      while not sr.EndOfStream do yield sr.ReadLine()
+  } |> Seq.fold (fun (res, s) line -> if line.StartsWith("-") then (s::res, "") else (res, s + "\n" + line))
+    ([],"") |> fst |> List.rev |> List.filter (fun l -> l.Length > 0) |> List.toArray 
+    |> choosei (function | i, x when i%2 = 1 -> Some x | _ -> None)
 
 let parseLayout (str:string) =   
   let charToHeight ch = 
