@@ -59,7 +59,7 @@ let loadXamlWindow (filename:string) =
   let reader = XmlReader.Create(filename)
   XamlReader.Load(reader) :?> Window
 
-let window = loadXamlWindow(__SOURCE_DIRECTORY__ + "/Mahjong.xaml")
+let window = loadXamlWindow(__SOURCE_DIRECTORY__ + "/mahjong.xaml")
 window.Show()
 let canvas = window.FindName("BoardCanvas") :?> Canvas
 
