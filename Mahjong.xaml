@@ -1,0 +1,34 @@
+﻿<Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Mahjong"
+        Background="Gray"
+        Width="1024" Height="768">
+  <StackPanel Orientation="Vertical">
+    <Menu>
+      <MenuItem Header="Game">
+        <MenuItem Header="New">
+          <MenuItem Header="Random" />
+          <Separator />
+          <MenuItem Header="Turtle" />
+          <MenuItem Header="Dragon" />
+          <MenuItem Header="Crab" />
+          <MenuItem Header="Spider" />
+        </MenuItem>
+        <Separator />
+        <MenuItem Header="Undo" />
+        <MenuItem Header="Shuffle" />
+        <Separator />
+        <MenuItem Header="Spider" />
+      </MenuItem>
+      <MenuItem Header="View">
+        <MenuItem Header="Show Free" />
+        <MenuItem Header="Show Matches" />
+        <MenuItem Header="Hide level" />
+        <MenuItem Header="Unhide level" />
+      </MenuItem>
+      <MenuItem Header="Help">
+      </MenuItem>
+    </Menu>
+    <Canvas Name="BoardCanvas" Margin="30,50,30,50"/>
+  </StackPanel>
+</Window>

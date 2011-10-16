@@ -51,40 +51,17 @@ open System.Windows.Controls
 open System.Windows.Shapes
 open System.Windows.Media
 open System.Windows.Media.Imaging
+open System.Windows.Markup
+open System.Xml
+open System.IO
 
-let c = new Canvas(Margin = new Thickness(30.,50.,30.,50.))
-let g = new StackPanel(Orientation=Orientation.Vertical)
+let loadXamlWindow (filename:string) =
+  let reader = XmlReader.Create(filename)
+  XamlReader.Load(reader) :?> Window
 
-let w = new Window(Content = g, Width = 1024.0, Height = 768.0,Background = Brushes.Gray)
-w.Show()
-
-type Control =
-  | MenuItem of string
-
-let s = new Menu();
-let mitem = new MenuItem(Header="Turtle")
-s.Items.Add(mitem);
-s.Items.Add(new MenuItem(Header="Dragon"))
-s.Items.Add(new MenuItem(Header="Spider"))
-s.Items.Add(new MenuItem(Header="Crab"))
-
-let menuFree = new MenuItem(Header="Show Free")
-s.Items.Add(menuFree)
-
-let menuMatches = new MenuItem(Header="Show Matches")
-s.Items.Add(menuMatches)
-
-let menuUndo = new MenuItem(Header="Undo")
-s.Items.Add(menuUndo)
-
-let menuShuffle = new MenuItem(Header="Shuffle")
-s.Items.Add(menuShuffle)
-
-s.Items.Add(new MenuItem(Header="Hide Level"))
-s.Items.Add(new MenuItem(Header="Unhide Level"));
-
-g.Children.Add(s);
-g.Children.Add(c);
+let window = loadXamlWindow(__SOURCE_DIRECTORY__ + "/Mahjong.xaml")
+window.Show()
+let canvas = window.FindName("BoardCanvas") :?> Canvas
 
 type SpriteAtlas = { 
   File: string;
@@ -99,7 +76,8 @@ let spriteBrush atlas id =
   let imgFile = __SOURCE_DIRECTORY__ + "/" + atlas.File
   let imgSource = new BitmapImage(new Uri(imgFile))
   let cardW, cardH = 1./(float atlas.Cols), 1./(float atlas.Rows)
-  let viewBox = new Rect(cardW*(float (id % atlas.Cols)), cardH*(float (id / atlas.Cols)), cardW, cardH)
+  let viewBox = new Rect(cardW*(float (id % atlas.Cols)), 
+                         cardH*(float (id / atlas.Cols)), cardW, cardH)
   new ImageBrush(ImageSource = imgSource, Viewbox = viewBox)
 
 let bgAtlas = {
@@ -159,83 +137,9 @@ let createCell (id, (i, j, level)) =
 //============================================================================================
 //  Layouts  
 //============================================================================================
-let turtle = "
-  111111111111111111111111  
-  111111111111111111111111      
-      1122222222222211
-      1122222222222211
-    11112233333333221111
-    11112233333333221111
-  111111223344443322111111
-111111112233455433221111111111
-111111112233455433221111111111
-  111111223344443322111111
-    11112233333333221111
-    11112233333333221111        
-      1122222222222211
-      1122222222222211
-  111111111111111111111111  
-  111111111111111111111111
-"
-
-let dragon = "
-  224422              224422
-2222442233          3322442222
-22      33112233221133      22
-44  22    1122332211    22  44 
-44  22    22      22    22  44 
-22        22      22        22
-222244221122  22  221122442222
-  2244221122  22  2211224422
-      22  22      22  22
-      22  22      22  22
-    4411112222222222111144
-    4411112222222222111144
-    44                  44
-    44  44  44  44  44  44
-    3311441144114411441133
-    3311  11  11  11  1133
-"
-
-let crab = "
- 11222222          22222211
- 11233332          23333211
- 11233332   2332   23333211 
- 11222222   2332   22222211  
-     112211111111112211
-     112211111111112211
-2222     1122332211     2222
-2222     1122332211     2222
-22      112234432211      22
-22      112234432211      22
-    11112222344322221111
-    11112222344322221111
-11222222  11111111  22222211
-11233332  11111111  23333211
-11233332   223322   23333211
-11222222   223322   22222211
-"
-
-let spider ="
-     2233   22  22   3322     
-     2233   22  22   3322     
-       22    1111    22       
- 33    2233  1111  3322    33 
- 3322    331122221133    2233 
-   223322  11222211  223322   
-     33221122333322112233     
-         112233332211         
-        11223333332211        
-332233221122334433221122332233
-33223322 112234432211 22332233
-         112233332211         
-       22  11333311  22       
-     3322  11333311  2233     
- 332233      2222      332233 
- 3322        2222        2233
-"
-
-let layouts = [|turtle; dragon; crab; spider|]
+let layouts = 
+  File.ReadAllLines(__SOURCE_DIRECTORY__ + "\layouts.txt")
+  //|> Array.fold (fun acc (elem:string) -> if elem.StartsWith("-")
 
 let parseLayout (str:string) =   
   let charToHeight ch = 
@@ -264,8 +168,6 @@ let parseLayout (str:string) =
           yield (col, row, level)
           shifts |> Array.iter (fun (x, y) -> l.[row + x].[col + y] <- level - 1) 
   } |> Seq.toArray
-
-
 //============================================================================================
 //  CARD UTILS
 //============================================================================================
@@ -348,95 +250,125 @@ let shuffleVisible coords (ids:int[]) (states:CardState[]) =
     |> Array.filter (fun (st, _, _) -> st = Visible)
     |> Array.iteri (fun i (_, idx, _) -> ids.[idx] <- s.[i])
   | None -> MessageBox.Show "Not possible to create solvable position!" |> ignore
+
+let genCardCoords layoutID =
+  layouts.[layoutID]
+  |> parseLayout 
+  |> Array.sortBy (fun (x, y, h) -> x + y + h*1000)
+
+let arrangeCards coords =
+  let cardTypes = 
+    [|1..fgAtlas.Frames|] 
+    |> shuffle 
+    |> Seq.truncate ((Array.length coords)/4)
+    |> replicate 4
+    |> Seq.toArray
+    |> tryMap 32 (tryArrangeSolvable coords)
+  match cardTypes with
+  | Some s -> s
+  | None -> MessageBox.Show "Not possible to create solvable position!" |> ignore; Array.empty
   
 //============================================================================================
 //  MUTABLE STATE
 //============================================================================================
-let cardCoords = 
-  let l = layouts |> shuffle 
-  l.[0]
-  |> parseLayout 
-  |> Array.sortBy (fun (x, y, h) -> x + y + h*1000) 
+type Game = 
+  { cardCoords: (int*int*int)[];
+    cardStates: CardState[];
+    mutable curSelected:int option;
+    mutable moves:int list;
+    cardIDs: int[];
+    cardParts:(Rectangle*Rectangle)[] }
 
-let cardStates = [|for x in 1 .. cardCoords.Length do yield Visible|]
-let mutable curSelected:int option = None
-let mutable moves:int list = []
+let newGame layoutID =
+  let coords = genCardCoords layoutID
+  let ids = arrangeCards coords 
+  let parts = 
+    coords
+    |> Array.zip ids
+    |> Array.map createCell
+  canvas.Children.Clear()
+  parts 
+    |> Array.iter (fun (bg, fg) -> canvas.Children.Add(bg) |> ignore; canvas.Children.Add(fg) |> ignore)
+  { cardCoords =  coords
+    cardStates = Array.init coords.Length (fun _ -> Visible)
+    curSelected = None
+    moves = []
+    cardIDs = ids
+    cardParts = parts }
 
-let cardIDs = 
-  let cardTypes = 
-    [|1..fgAtlas.Frames|] 
-    |> shuffle 
-    |> Seq.truncate ((Array.length cardCoords)/4)
-    |> replicate 4
-    |> Seq.toArray
-    |> tryMap 32 (tryArrangeSolvable cardCoords)
-  match cardTypes with
-  | Some s -> s
-  | None -> MessageBox.Show "Not possible to create solvable position!" |> ignore; Array.empty
-
-let cardParts = 
-  cardCoords
-  |> Array.zip cardIDs
-  |> Array.map createCell
-
-cardParts 
-  |> Array.iter (fun (bg, fg) -> c.Children.Add(bg) |> ignore; c.Children.Add(fg) |> ignore)
-
+let mutable game = newGame ((new System.Random()).Next(0, Array.length layouts))
+//============================================================================================
+//  GAME CODE
+//============================================================================================
 let updateCardVisuals () =
-  cardStates |> Array.iteri (fun i state -> updateCardVisual cardParts.[i] cardIDs.[i] state)
+  game.cardStates |> Array.iteri (fun i state -> updateCardVisual game.cardParts.[i] game.cardIDs.[i] state)
   
 let setCardState state idx =
-  cardStates.[idx] <- state
-  updateCardVisual cardParts.[idx] cardIDs.[idx] state
+  game.cardStates.[idx] <- state
+  updateCardVisual game.cardParts.[idx] game.cardIDs.[idx] state
 
 let undoMove () = 
-  match moves with
-  | a::b::rest -> moves <- rest; setCardState Visible a; setCardState Visible b;
+  match game.moves with
+  | a::b::rest -> game.moves <- rest; setCardState Visible a; setCardState Visible b;
   | _ -> ()
 
-let showFree () = getFree cardCoords cardStates |> List.iter (setCardState Selected)
-let showMatches () = getMatches cardIDs cardCoords cardStates |> List.iter (setCardState Selected)
-
 let pickCell mx my = 
-    cardCoords 
+    game.cardCoords 
     |> Array.map cellCoord 
     |> tryFindLastIndexi (fun n (x, y, w, h) -> 
-      cardStates.[n] <> Hidden && mx > x && my > y && mx < x + w && my < y + h)
+      game.cardStates.[n] <> Hidden && mx > x && my > y && mx < x + w && my < y + h)
 
 let unselectAll () = 
-    curSelected <- None
-    [|0 .. cardCoords.Length - 1|] 
-    |> Array.filter (fun i -> cardStates.[i] <> Hidden) 
+    game.curSelected <- None
+    [|0 .. game.cardCoords.Length - 1|] 
+    |> Array.filter (fun i -> game.cardStates.[i] <> Hidden) 
     |> Array.iter (setCardState Visible)
+
+let showFree () =  
+  unselectAll ()
+  getFree game.cardCoords game.cardStates |> List.iter (setCardState Selected)
+
+let showMatches () = 
+  unselectAll ()
+  getMatches game.cardIDs game.cardCoords game.cardStates |> List.iter (setCardState Selected)
 
 let handleClick (mx, my) = 
   let cell = match pickCell mx my with
-             | Some cellIdx when (isFree cardCoords cardStates cellIdx) -> Some cellIdx
+             | Some cellIdx when (isFree game.cardCoords game.cardStates cellIdx) -> Some cellIdx
              | _ -> None
-  match cell, curSelected with
+  match cell, game.curSelected with
   | Some c, Some s when c = s -> unselectAll ()
-  | Some c, Some s when cardIDs.[c] = cardIDs.[s] -> 
-      unselectAll (); setCardState Hidden c; setCardState Hidden s; moves <- c::s::moves;
-      if (cardStates |> Array.forall (fun st -> st = Hidden)) then 
+  | Some c, Some s when game.cardIDs.[c] = game.cardIDs.[s] -> 
+      unselectAll (); setCardState Hidden c; setCardState Hidden s; game.moves <- c::s::game.moves;
+      if (game.cardStates |> Array.forall (fun st -> st = Hidden)) then 
         MessageBox.Show "Amazing, you've won in this impossible game!" |> ignore
-        // start the new game
-      elif ((getMatches cardIDs cardCoords cardStates).Length = 0) then 
+        game <- newGame 0
+      elif ((getMatches game.cardIDs game.cardCoords game.cardStates).Length = 0) then 
         MessageBox.Show "No more possible moves. You've lost, sorry" |> ignore
-        shuffleVisible cardCoords cardIDs cardStates
+        shuffleVisible game.cardCoords game.cardIDs game.cardStates
         updateCardVisuals()
-  | Some c, None -> setCardState Selected c; curSelected <- Some(c)
+  | Some c, None -> setCardState Selected c; game.curSelected <- Some(c)
   | _, _ -> unselectAll ()
 
 
 let events = 
-  w.MouseDown
+  window.MouseDown
   |> Event.filter (fun mi -> (mi.ChangedButton = Input.MouseButton.Left && 
                               mi.ButtonState = Input.MouseButtonState.Pressed))
-  |> Event.map (fun mi -> (mi.GetPosition(c).X, mi.GetPosition(c).Y))
+  |> Event.map (fun mi -> (mi.GetPosition(canvas).X, mi.GetPosition(canvas).Y))
   |> Event.add handleClick
  
 
-menuUndo.Click.Add(fun _ -> undoMove())
-menuShuffle.Click.Add(fun _ -> shuffleVisible cardCoords cardIDs cardStates; updateCardVisuals())
-menuFree.Click.Add(fun _ -> showFree())
-menuMatches.Click.Add(fun _ -> showMatches())
+//menuUndo.Click.Add(fun _ -> undoMove())
+//menuShuffle.Click.Add(fun _ -> shuffleVisible game.cardCoords game.cardIDs game.cardStates; updateCardVisuals())
+//menuFree.Click.Add(fun _ -> showFree())
+//menuMatches.Click.Add(fun _ -> showMatches())
+//
+//menuRandom.Click.Add(fun _ -> game <- newGame ((new System.Random()).Next(0, Array.length layouts)))
+//menuTurtle.Click.Add(fun _ -> game <- newGame 0)
+//menuDragon.Click.Add(fun _ -> game <- newGame 1)
+//menuCrab.Click.Add(fun _ -> game <- newGame 2)
+//menuSpider.Click.Add(fun _ -> game <- newGame 3)
+//
+//menuHideLevel.Click.Add(fun _ -> showMatches())
+//menuUnhideLevel.Click.Add(fun _ -> showMatches())
