@@ -363,16 +363,24 @@ let events =
   |> Event.add handleClick
  
 
-//menuUndo.Click.Add(fun _ -> undoMove())
-//menuShuffle.Click.Add(fun _ -> shuffleVisible game.cardCoords game.cardIDs game.cardStates; updateCardVisuals())
-//menuFree.Click.Add(fun _ -> showFree())
-//menuMatches.Click.Add(fun _ -> showMatches())
-//
-//menuRandom.Click.Add(fun _ -> game <- newGame ((new System.Random()).Next(0, Array.length layouts)))
-//menuTurtle.Click.Add(fun _ -> game <- newGame 0)
-//menuDragon.Click.Add(fun _ -> game <- newGame 1)
-//menuCrab.Click.Add(fun _ -> game <- newGame 2)
-//menuSpider.Click.Add(fun _ -> game <- newGame 3)
-//
-//menuHideLevel.Click.Add(fun _ -> showMatches())
-//menuUnhideLevel.Click.Add(fun _ -> showMatches())
+let bindMenuItem name fn =
+  let menuItem = window.FindName(name) :?> MenuItem
+  menuItem.Click.Add(fun _ -> fn ())
+
+bindMenuItem "MenuUndo" undoMove
+bindMenuItem "MenuShuffle" (fun _ -> shuffleVisible game.cardCoords game.cardIDs game.cardStates; updateCardVisuals())
+bindMenuItem "MenuShowFree" showFree
+bindMenuItem "MenuShowMatches" showMatches
+
+bindMenuItem "MenuHideLevel" showMatches
+bindMenuItem "MenuUnhideLevel" showMatches
+
+let startGame id = 
+  fun _ -> game <- newGame id
+
+bindMenuItem "MenuRandom" (startGame ((new System.Random()).Next(0, Array.length layouts)))
+bindMenuItem "MenuTurtle" (startGame 0)
+bindMenuItem "MenuDragon" (startGame 1)
+bindMenuItem "MenuCrab" (startGame 2)
+bindMenuItem "MenuSpider" (startGame 3)
+

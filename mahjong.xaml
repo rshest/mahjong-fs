@@ -7,24 +7,24 @@
     <Menu>
       <MenuItem Header="Game">
         <MenuItem Header="New">
-          <MenuItem Header="Random" />
+          <MenuItem Name="MenuRandom" Header="Random" />
           <Separator />
-          <MenuItem Header="Turtle" />
-          <MenuItem Header="Dragon" />
-          <MenuItem Header="Crab" />
-          <MenuItem Header="Spider" />
+          <MenuItem Name="MenuTurtle" Header="Turtle"/>
+          <MenuItem Name="MenuDragon" Header="Dragon" />
+          <MenuItem Name="MenuCrab" Header="Crab" />
+          <MenuItem Name="MenuSpider" Header="Spider" />
         </MenuItem>
         <Separator />
-        <MenuItem Header="Undo" />
-        <MenuItem Header="Shuffle" />
+        <MenuItem Name="MenuUndo" Header="Undo" />
+        <MenuItem Name="MenuShuffle" Header="Shuffle" />
         <Separator />
-        <MenuItem Header="Spider" />
+        <MenuItem Name="MenuExit" Header="Exit" />
       </MenuItem>
       <MenuItem Header="View">
-        <MenuItem Header="Show Free" />
-        <MenuItem Header="Show Matches" />
-        <MenuItem Header="Hide level" />
-        <MenuItem Header="Unhide level" />
+        <MenuItem Name="MenuShowFree" Header="Show Free" />
+        <MenuItem Name="MenuShowMatches" Header="Show Matches" />
+        <MenuItem Name="MenuHideLevel" Header="Hide level" />
+        <MenuItem Name="MenuUnhideLevel" Header="Unhide level" />
       </MenuItem>
       <MenuItem Header="Help">
       </MenuItem>
