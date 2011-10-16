@@ -119,6 +119,9 @@ let updateCardVisual parts id state =
     | _ -> spriteBrush fgAtlas id
   fg.Fill <- imgBrush
 
+let setCardOpacity opacity (fg:Rectangle, bg:Rectangle) =
+    fg.Opacity <- opacity; bg.Opacity <- opacity;
+
 let cellSz = 64., 75.
 let levShift = -7., -10.
 
@@ -241,7 +244,6 @@ let tryArrangeSolvable (coords:(int*int*int)[]) (cardTypes:int[]) =
   let numCards = Seq.length cardTypes
   if ids.Length <> numCards then None else Some ids
 
-
 let shuffleVisible coords (ids:int[]) (states:CardState[]) =
   let shuffled = 
     ids
@@ -271,16 +273,21 @@ let arrangeCards coords =
   match cardTypes with
   | Some s -> s
   | None -> MessageBox.Show "Not possible to create solvable position!" |> ignore; Array.empty
+
+let getMaxLevel coords = 
+  let  _, _, m = coords |> Array.maxBy (fun (_, _, h) -> h)
+  m
   
 //============================================================================================
 //  MUTABLE STATE
 //============================================================================================
 type Game = 
-  { cardCoords: (int*int*int)[];
-    cardStates: CardState[];
-    mutable curSelected:int option;
-    mutable moves:int list;
-    cardIDs: int[];
+  { cardCoords: (int*int*int)[]
+    cardStates: CardState[]
+    mutable curSelected:int option
+    mutable moves:int list
+    cardIDs: int[]
+    mutable numHiddenLevels: int
     cardParts:(Rectangle*Rectangle)[] }
 
 let newGame layoutID =
@@ -298,6 +305,7 @@ let newGame layoutID =
     curSelected = None
     moves = []
     cardIDs = ids
+    numHiddenLevels = 0
     cardParts = parts }
 
 let mutable game = newGame ((new System.Random()).Next(0, Array.length layouts))
@@ -327,6 +335,13 @@ let unselectAll () =
     [|0 .. game.cardCoords.Length - 1|] 
     |> Array.filter (fun i -> game.cardStates.[i] <> Hidden) 
     |> Array.iter (setCardState Visible)
+
+let hideLevels num = 
+  let maxLevel = getMaxLevel game.cardCoords
+  if num >= 0 && num < maxLevel then
+    game.numHiddenLevels <- num
+    game.cardCoords |> Array.iteri (fun i (_, _, h) -> 
+      setCardOpacity (if h <= maxLevel - num then 1.0 else 0.2) game.cardParts.[i])
 
 let showFree () =  
   unselectAll ()
@@ -372,8 +387,8 @@ bindMenuItem "MenuShuffle" (fun _ -> shuffleVisible game.cardCoords game.cardIDs
 bindMenuItem "MenuShowFree" showFree
 bindMenuItem "MenuShowMatches" showMatches
 
-bindMenuItem "MenuHideLevel" showMatches
-bindMenuItem "MenuUnhideLevel" showMatches
+bindMenuItem "MenuHideLevel" (fun _ -> hideLevels (game.numHiddenLevels + 1))
+bindMenuItem "MenuUnhideLevel" (fun _ -> hideLevels (game.numHiddenLevels - 1))
 
 let startGame id = 
   fun _ -> game <- newGame id

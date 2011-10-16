@@ -23,10 +23,12 @@
       <MenuItem Header="View">
         <MenuItem Name="MenuShowFree" Header="Show Free" />
         <MenuItem Name="MenuShowMatches" Header="Show Matches" />
+        <Separator />
         <MenuItem Name="MenuHideLevel" Header="Hide level" />
         <MenuItem Name="MenuUnhideLevel" Header="Unhide level" />
       </MenuItem>
       <MenuItem Header="Help">
+        <MenuItem Header="About" />
       </MenuItem>
     </Menu>
     <Canvas Name="BoardCanvas" Margin="30,50,30,50"/>
