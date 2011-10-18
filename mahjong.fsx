@@ -88,7 +88,7 @@ let bgAtlas = {
 
 let fgAtlas = {
   File = "cards.png";
-  Cols = 12; Rows = 8; Frames = 91;
+  Cols = 12; Rows = 8; Frames = 94;
   FrameWidth = 64.; FrameHeight = 60.;
 }
 
@@ -244,11 +244,13 @@ let tryArrangeSolvable (coords:(int*int*int)[]) (cardTypes:int[]) =
   let numCards = Seq.length cardTypes
   if ids.Length <> numCards then None else Some ids
 
+//  TODO: cleanup this mess
 let shuffleVisible coords (ids:int[]) (states:CardState[]) =
+  let isVisible = (function | i, id when states.[i] = Visible -> Some id | _ -> None)
   let shuffled = 
     ids
-    |> choosei (function | i, id when states.[i] = Visible -> Some id | _ -> None)
-    |> tryMap 32 (tryArrangeSolvable coords)
+    |> choosei isVisible
+    |> tryMap 32 (tryArrangeSolvable (choosei isVisible coords))
   match shuffled with
   | Some s -> 
     ids 
@@ -369,7 +371,6 @@ let handleClick (mx, my) =
   | Some c, None -> setCardState Selected c; game.curSelected <- Some(c)
   | _, _ -> unselectAll ()
 
-
 let events = 
   window.MouseDown
   |> Event.filter (fun mi -> (mi.ChangedButton = Input.MouseButton.Left && 
@@ -377,25 +378,26 @@ let events =
   |> Event.map (fun mi -> (mi.GetPosition(canvas).X, mi.GetPosition(canvas).Y))
   |> Event.add handleClick
  
-
-let bindMenuItem name fn =
-  let menuItem = window.FindName(name) :?> MenuItem
-  menuItem.Click.Add(fun _ -> fn ())
-
-bindMenuItem "MenuUndo" undoMove
-bindMenuItem "MenuShuffle" (fun _ -> shuffleVisible game.cardCoords game.cardIDs game.cardStates; updateCardVisuals())
-bindMenuItem "MenuShowFree" showFree
-bindMenuItem "MenuShowMatches" showMatches
-
-bindMenuItem "MenuHideLevel" (fun _ -> hideLevels (game.numHiddenLevels + 1))
-bindMenuItem "MenuUnhideLevel" (fun _ -> hideLevels (game.numHiddenLevels - 1))
-
 let startGame id = 
   fun _ -> game <- newGame id
 
-bindMenuItem "MenuRandom" (startGame ((new System.Random()).Next(0, Array.length layouts)))
-bindMenuItem "MenuTurtle" (startGame 0)
-bindMenuItem "MenuDragon" (startGame 1)
-bindMenuItem "MenuCrab" (startGame 2)
-bindMenuItem "MenuSpider" (startGame 3)
+let bindMenuItem (name, fn) =
+  let menuItem = window.FindName(name) :?> MenuItem
+  menuItem.Click.Add(fun _ -> fn ())
+
+[ "MenuUndo", undoMove
+  "MenuShuffle", fun _ -> shuffleVisible game.cardCoords game.cardIDs game.cardStates; updateCardVisuals()
+  "MenuShowFree", showFree
+  "MenuShowMatches", showMatches
+  "MenuHideLevel", fun _ -> hideLevels (game.numHiddenLevels + 1)
+  "MenuUnhideLevel", fun _ -> hideLevels (game.numHiddenLevels - 1)
+  "MenuRandom", startGame ((new System.Random()).Next(0, Array.length layouts))
+  "MenuTurtle", startGame 0
+  "MenuDragon", startGame 1
+  "MenuCrab", startGame 2
+  "MenuSpider", startGame 3
+  "MenuExit", window.Close
+] |> List.iter bindMenuItem
+
+
 
