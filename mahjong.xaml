@@ -3,8 +3,13 @@
         Title="Mahjong"
         Background="Gray"
         Width="1024" Height="768">
-  <StackPanel Orientation="Vertical">
-    <Menu>
+  <Grid>
+    <Grid.RowDefinitions>
+      <RowDefinition Height="Auto" />
+      <RowDefinition Height="*" />
+      <RowDefinition Height="Auto" />
+    </Grid.RowDefinitions>
+    <Menu  Grid.Row="0">
       <MenuItem Header="Game">
         <MenuItem Header="New">
           <MenuItem Name="MenuRandom"
@@ -37,6 +42,24 @@
         <MenuItem Name="MenuAbout" Header="About" />
       </MenuItem>
     </Menu>
-    <Canvas Name="BoardCanvas" Margin="30,50,30,50"/>
-  </StackPanel>
+    <Canvas  Grid.Row="1" Name="BoardCanvas" Margin="35,60,30,50"/>
+    <StatusBar Grid.Row="2">
+      <StatusBarItem>
+        <StackPanel Orientation="Horizontal">
+          <Button Name="CardURL">
+            <Button.Template>
+              <ControlTemplate TargetType="{x:Type Button}">
+                <ContentPresenter/>
+              </ControlTemplate>
+            </Button.Template>
+            <TextBlock Name="CardName"
+                       Cursor="Hand"
+                       Foreground="Blue"
+                       TextDecorations="Underline"
+                       VerticalAlignment="Bottom" />
+          </Button>
+        </StackPanel>
+      </StatusBarItem>
+    </StatusBar>
+  </Grid>
 </Window>

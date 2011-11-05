@@ -72,7 +72,6 @@ type SpriteAtlas = {
   File: string;
   Cols: int;
   Rows: int;
-  Frames: int;
   FrameWidth: float;
   FrameHeight: float; 
 }
@@ -86,13 +85,13 @@ let spriteBrush atlas id =
 
 let bgAtlas = {
   File = "brick.png";
-  Cols = 2; Rows = 1; Frames = 2;
+  Cols = 2; Rows = 1;
   FrameWidth = 74.; FrameHeight = 85.;
 }
 
 let fgAtlas = {
   File = "cards.png";
-  Cols = 12; Rows = 9; Frames = 104;
+  Cols = 12; Rows = 9;
   FrameWidth = 64.; FrameHeight = 60.;
 }
 
@@ -185,6 +184,17 @@ let parseLayout (str:string) =
           shifts |> Array.iter (fun (x, y) -> l.[row + x].[col + y] <- level - 1) 
   } |> Seq.toArray
 
+let langs = 
+  seq {
+        use sr = new StreamReader(fullPath "languages.txt")
+        while not sr.EndOfStream do yield sr.ReadLine()
+    } 
+    |> Seq.map (fun s -> s.Trim().Split('|'))
+    |> Seq.filter (fun el -> el.Length = 2)
+    |> Seq.map (fun el -> (el.[0], el.[1]))
+    |> Seq.toArray
+
+let numCardTypes = Array.length langs
 //============================================================================================
 //  CARD FUNCTIONS
 //============================================================================================
@@ -275,7 +285,7 @@ let genCardCoords layoutID =
 
 let arrangeCards coords =
   let cardTypes = 
-    [|1..fgAtlas.Frames|] 
+    [|1..numCardTypes|] 
     |> shuffle 
     |> Seq.truncate ((Array.length coords)/4)
     |> replicate 4
@@ -382,7 +392,12 @@ let handleClick (mx, my) =
         MessageBox.Show "No more possible moves. You've lost, sorry" |> ignore
         shuffleVisible game.cardCoords game.cardIDs game.cardStates
         updateCardVisuals()
-  | Some c, None -> setCardState Selected c; game.curSelected <- Some(c)
+  | Some c, None -> 
+      setCardState Selected c
+      game.curSelected <- Some(c)
+      let url, lang = langs.[game.cardIDs.[c] - 1]
+      let status = window.FindName("CardName") :?> TextBlock
+      status.Text <- lang
   | _, _ -> unselectAll ()
 
 let events = 
@@ -418,5 +433,9 @@ let HELP_URL = @"http://en.wikipedia.org/wiki/Mahjong_solitaire"
   "MenuAbout", fun _ -> Diagnostics.Process.Start HELP_URL |> ignore
 ] |> List.iter bindMenuItem
 
-
+let cardURL = window.FindName("CardURL") :?> Button
+cardURL.Click.Add(fun _ -> 
+                    match game.curSelected with
+                    | Some sel -> Diagnostics.Process.Start (fst langs.[game.cardIDs.[sel] - 1]) |> ignore
+                    | None -> ())
 
