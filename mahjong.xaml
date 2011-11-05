@@ -34,7 +34,7 @@
                   Header="Unhide level"/>
       </MenuItem>
       <MenuItem Header="Help">
-        <MenuItem Header="About" />
+        <MenuItem Name="MenuAbout" Header="About" />
       </MenuItem>
     </Menu>
     <Canvas Name="BoardCanvas" Margin="30,50,30,50"/>

@@ -399,6 +399,9 @@ let bindMenuItem (name, fn) =
   let menuItem = window.FindName(name) :?> MenuItem
   menuItem.Click.Add(fun _ -> fn ())
 
+[<Literal>]
+let HELP_URL = @"http://en.wikipedia.org/wiki/Mahjong_solitaire"
+
 [ "MenuUndo", undoMove
   "MenuShuffle", fun _ -> shuffleVisible game.cardCoords game.cardIDs game.cardStates
                           updateCardVisuals()
@@ -412,6 +415,7 @@ let bindMenuItem (name, fn) =
   "MenuCrab", startGame 2
   "MenuSpider", startGame 3
   "MenuExit", window.Close
+  "MenuAbout", fun _ -> Diagnostics.Process.Start HELP_URL |> ignore
 ] |> List.iter bindMenuItem
 
 
