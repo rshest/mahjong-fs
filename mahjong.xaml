@@ -7,7 +7,8 @@
     <Menu>
       <MenuItem Header="Game">
         <MenuItem Header="New">
-          <MenuItem Name="MenuRandom" Header="Random" />
+          <MenuItem Name="MenuRandom"
+                    Header="Random"/>
           <Separator />
           <MenuItem Name="MenuTurtle" Header="Turtle"/>
           <MenuItem Name="MenuDragon" Header="Dragon" />
@@ -15,17 +16,22 @@
           <MenuItem Name="MenuSpider" Header="Spider" />
         </MenuItem>
         <Separator />
-        <MenuItem Name="MenuUndo" Header="Undo" />
+        <MenuItem Name="MenuUndo"
+                  Header="Undo"/>
         <MenuItem Name="MenuShuffle" Header="Shuffle" />
         <Separator />
         <MenuItem Name="MenuExit" Header="Exit" />
       </MenuItem>
       <MenuItem Header="View">
-        <MenuItem Name="MenuShowFree" Header="Show Free" />
-        <MenuItem Name="MenuShowMatches" Header="Show Matches" />
+        <MenuItem Name="MenuShowFree"
+                  Header="Show Free"/>
+        <MenuItem Name="MenuShowMatches"
+                  Header="Show Matches"/>
         <Separator />
-        <MenuItem Name="MenuHideLevel" Header="Hide level" />
-        <MenuItem Name="MenuUnhideLevel" Header="Unhide level" />
+        <MenuItem Name="MenuHideLevel"
+                  Header="Hide level"/>
+        <MenuItem Name="MenuUnhideLevel"
+                  Header="Unhide level"/>
       </MenuItem>
       <MenuItem Header="Help">
         <MenuItem Header="About" />

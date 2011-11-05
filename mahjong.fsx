@@ -1,4 +1,7 @@
-﻿#r "WindowsBase"
+﻿//  Simple Mahjong solitaire game
+//  2011, Ruslan Shestopalyuk
+
+#r "WindowsBase"
 #r "PresentationCore"
 #r "PresentationFramework"
 #r "System.Xaml"
@@ -55,11 +58,13 @@ open System.Windows.Markup
 open System.Xml
 open System.IO
 
+let fullPath file = __SOURCE_DIRECTORY__ + "/"+ file
+
 let loadXamlWindow (filename:string) =
   let reader = XmlReader.Create(filename)
   XamlReader.Load(reader) :?> Window
 
-let window = loadXamlWindow(__SOURCE_DIRECTORY__ + "/mahjong.xaml")
+let window = loadXamlWindow(fullPath "mahjong.xaml")
 window.Show()
 let canvas = window.FindName("BoardCanvas") :?> Canvas
 
@@ -73,8 +78,7 @@ type SpriteAtlas = {
 }
 
 let spriteBrush atlas id =
-  let imgFile = __SOURCE_DIRECTORY__ + "/" + atlas.File
-  let imgSource = new BitmapImage(new Uri(imgFile))
+  let imgSource = new BitmapImage(new Uri(fullPath atlas.File))
   let cardW, cardH = 1./(float atlas.Cols), 1./(float atlas.Rows)
   let viewBox = new Rect(cardW*(float (id % atlas.Cols)), 
                          cardH*(float (id / atlas.Cols)), cardW, cardH)
@@ -88,7 +92,7 @@ let bgAtlas = {
 
 let fgAtlas = {
   File = "cards.png";
-  Cols = 12; Rows = 8; Frames = 94;
+  Cols = 12; Rows = 9; Frames = 104;
   FrameWidth = 64.; FrameHeight = 60.;
 }
 
@@ -106,8 +110,8 @@ type CardState =
   | Selected
   | Hidden
 
-let updateCardVisual parts id state = 
-  let (bg:Rectangle), (fg:Rectangle) = parts
+let updateCardVisual cardControls id state = 
+  let (bg:Rectangle), (fg:Rectangle) = cardControls
   let spriteID = if state = Selected then 1 else 0
   let selBrush = spriteBrush bgAtlas spriteID
   match state with
@@ -133,19 +137,24 @@ let cellCoord (i, j, level) =
 
 let createCell (id, (i, j, level)) =
   let (x, y, _, _) = cellCoord(i, j, level)
-  let parts = createBrick x y id
-  updateCardVisual parts id Visible
-  parts
+  let cardControls = createBrick x y id
+  updateCardVisual cardControls id Visible
+  cardControls
 
 //============================================================================================
 //  Layouts  
 //============================================================================================
 let layouts = 
+  let splitSections (res, s) (line:string) = 
+    if line.StartsWith("-") then (s::res, "") else (res, s + "\n" + line)
   seq {
-      use sr = new StreamReader(__SOURCE_DIRECTORY__ + "\layouts.txt")
+      use sr = new StreamReader(fullPath "layouts.txt")
       while not sr.EndOfStream do yield sr.ReadLine()
-  } |> Seq.fold (fun (res, s) line -> if line.StartsWith("-") then (s::res, "") else (res, s + "\n" + line))
-    ([],"") |> fst |> List.rev |> List.filter (fun l -> l.Length > 0) |> List.toArray 
+  } |> Seq.fold splitSections ([],"") 
+    |> fst 
+    |> List.rev 
+    |> List.filter (fun l -> l.Length > 0) 
+    |> List.toArray 
     |> choosei (function | i, x when i%2 = 1 -> Some x | _ -> None)
 
 let parseLayout (str:string) =   
@@ -175,8 +184,9 @@ let parseLayout (str:string) =
           yield (col, row, level)
           shifts |> Array.iter (fun (x, y) -> l.[row + x].[col + y] <- level - 1) 
   } |> Seq.toArray
+
 //============================================================================================
-//  CARD UTILS
+//  CARD FUNCTIONS
 //============================================================================================
 let isFree coords = 
   //  create hash table with coordinates to quickly find neighbors
@@ -244,13 +254,12 @@ let tryArrangeSolvable (coords:(int*int*int)[]) (cardTypes:int[]) =
   let numCards = Seq.length cardTypes
   if ids.Length <> numCards then None else Some ids
 
-//  TODO: cleanup this mess
 let shuffleVisible coords (ids:int[]) (states:CardState[]) =
   let isVisible = (function | i, id when states.[i] = Visible -> Some id | _ -> None)
   let shuffled = 
     ids
     |> choosei isVisible
-    |> tryMap 32 (tryArrangeSolvable (choosei isVisible coords))
+    |> tryMap 50 (tryArrangeSolvable (choosei isVisible coords))
   match shuffled with
   | Some s -> 
     ids 
@@ -286,40 +295,42 @@ let getMaxLevel coords =
 type Game = 
   { cardCoords: (int*int*int)[]
     cardStates: CardState[]
+    cardIDs: int[]
+    cardControls:(Rectangle*Rectangle)[] 
     mutable curSelected:int option
     mutable moves:int list
-    cardIDs: int[]
-    mutable numHiddenLevels: int
-    cardParts:(Rectangle*Rectangle)[] }
+    mutable numHiddenLevels: int }
 
 let newGame layoutID =
   let coords = genCardCoords layoutID
   let ids = arrangeCards coords 
-  let parts = 
+  let controls = 
     coords
     |> Array.zip ids
     |> Array.map createCell
   canvas.Children.Clear()
-  parts 
-    |> Array.iter (fun (bg, fg) -> canvas.Children.Add(bg) |> ignore; canvas.Children.Add(fg) |> ignore)
+  controls 
+    |> Array.iter (fun (bg, fg) -> canvas.Children.Add(bg) |> ignore
+                                   canvas.Children.Add(fg) |> ignore)
   { cardCoords =  coords
     cardStates = Array.init coords.Length (fun _ -> Visible)
     curSelected = None
     moves = []
     cardIDs = ids
     numHiddenLevels = 0
-    cardParts = parts }
+    cardControls = controls }
 
 let mutable game = newGame ((new System.Random()).Next(0, Array.length layouts))
 //============================================================================================
 //  GAME CODE
 //============================================================================================
 let updateCardVisuals () =
-  game.cardStates |> Array.iteri (fun i state -> updateCardVisual game.cardParts.[i] game.cardIDs.[i] state)
+  game.cardStates 
+  |> Array.iteri (fun i state -> updateCardVisual game.cardControls.[i] game.cardIDs.[i] state)
   
 let setCardState state idx =
   game.cardStates.[idx] <- state
-  updateCardVisual game.cardParts.[idx] game.cardIDs.[idx] state
+  updateCardVisual game.cardControls.[idx] game.cardIDs.[idx] state
 
 let undoMove () = 
   match game.moves with
@@ -343,7 +354,7 @@ let hideLevels num =
   if num >= 0 && num < maxLevel then
     game.numHiddenLevels <- num
     game.cardCoords |> Array.iteri (fun i (_, _, h) -> 
-      setCardOpacity (if h <= maxLevel - num then 1.0 else 0.2) game.cardParts.[i])
+      setCardOpacity (if h <= maxLevel - num then 1.0 else 0.2) game.cardControls.[i])
 
 let showFree () =  
   unselectAll ()
@@ -360,7 +371,10 @@ let handleClick (mx, my) =
   match cell, game.curSelected with
   | Some c, Some s when c = s -> unselectAll ()
   | Some c, Some s when game.cardIDs.[c] = game.cardIDs.[s] -> 
-      unselectAll (); setCardState Hidden c; setCardState Hidden s; game.moves <- c::s::game.moves;
+      unselectAll () 
+      setCardState Hidden c 
+      setCardState Hidden s 
+      game.moves <- c::s::game.moves;
       if (game.cardStates |> Array.forall (fun st -> st = Hidden)) then 
         MessageBox.Show "Amazing, you've won in this impossible game!" |> ignore
         game <- newGame 0
@@ -386,7 +400,8 @@ let bindMenuItem (name, fn) =
   menuItem.Click.Add(fun _ -> fn ())
 
 [ "MenuUndo", undoMove
-  "MenuShuffle", fun _ -> shuffleVisible game.cardCoords game.cardIDs game.cardStates; updateCardVisuals()
+  "MenuShuffle", fun _ -> shuffleVisible game.cardCoords game.cardIDs game.cardStates
+                          updateCardVisuals()
   "MenuShowFree", showFree
   "MenuShowMatches", showMatches
   "MenuHideLevel", fun _ -> hideLevels (game.numHiddenLevels + 1)
