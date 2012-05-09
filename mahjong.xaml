@@ -42,7 +42,12 @@
         <MenuItem Name="MenuAbout" Header="About" />
       </MenuItem>
     </Menu>
-    <Canvas  Grid.Row="1" Name="BoardCanvas" Margin="35,60,30,50"/>
+    <Grid HorizontalAlignment="Center"
+          VerticalAlignment="Center">
+      <Canvas  Grid.Row="1"
+               Name="BoardCanvas"
+               Margin="35,60,30,50" />
+    </Grid>
     <StatusBar Grid.Row="2">
       <StatusBarItem>
         <StackPanel Orientation="Horizontal">

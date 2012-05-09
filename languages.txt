@@ -109,4 +109,7 @@ http://en.wikipedia.org/wiki/Axum_(programming_language)|Axum
 http://www.seas.upenn.edu/~harmony|Boomerang
 http://alloy.mit.edu/community|Alloy
 http://en.wikipedia.org/wiki/Sql|SQL
-http://en.wikipedia.org/wiki/Scumm"|SCUMM
+http://en.wikipedia.org/wiki/Scumm|SCUMM
+http://en.wikipedia.org/wiki/Racket_(programming_language)|Racket
+http://en.wikipedia.org/wiki/Vala_(programming_language)|Vala
+http://en.wikipedia.org/wiki/Dark_Basic|DarkBASIC
