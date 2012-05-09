@@ -1,45 +1,38 @@
 ﻿<Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="Mahjong"
-        Background="Gray"
-        Width="1024" Height="768">
+        Title="F#/WPF Mahjong Solitaire" Background="Gray" Width="1024" Height="768">
   <Grid>
     <Grid.RowDefinitions>
-      <RowDefinition Height="Auto" />
-      <RowDefinition Height="*" />
-      <RowDefinition Height="Auto" />
+      <RowDefinition Height="Auto"/>
+      <RowDefinition Height="*"/>
+      <RowDefinition Height="Auto"/>
     </Grid.RowDefinitions>
     <Menu  Grid.Row="0">
       <MenuItem Header="Game">
         <MenuItem Header="New">
-          <MenuItem Name="MenuRandom"
-                    Header="Random"/>
-          <Separator />
+          <MenuItem Name="MenuRandom" Header="Random"/>
+          <Separator/>
           <MenuItem Name="MenuTurtle" Header="Turtle"/>
-          <MenuItem Name="MenuDragon" Header="Dragon" />
-          <MenuItem Name="MenuCrab" Header="Crab" />
-          <MenuItem Name="MenuSpider" Header="Spider" />
+          <MenuItem Name="MenuDragon" Header="Dragon"/>
+          <MenuItem Name="MenuCrab" Header="Crab"/>
+          <MenuItem Name="MenuSpider" Header="Spider"/>
         </MenuItem>
-        <Separator />
-        <MenuItem Name="MenuUndo"
-                  Header="Undo"/>
-        <MenuItem Name="MenuShuffle" Header="Shuffle" />
-        <Separator />
-        <MenuItem Name="MenuExit" Header="Exit" />
+        <Separator/>
+        <MenuItem Name="MenuUndo" Header="Undo"/>
+        <MenuItem Name="MenuShuffle" Header="Shuffle"/>
+        <MenuItem Name="MenuShuffleSolvable" Header="Shuffle Solvable"/>
+        <Separator/>
+        <MenuItem Name="MenuExit" Header="Exit"/>
       </MenuItem>
       <MenuItem Header="View">
-        <MenuItem Name="MenuShowFree"
-                  Header="Show Free"/>
-        <MenuItem Name="MenuShowMatches"
-                  Header="Show Matches"/>
-        <Separator />
-        <MenuItem Name="MenuHideLevel"
-                  Header="Hide level"/>
-        <MenuItem Name="MenuUnhideLevel"
-                  Header="Unhide level"/>
+        <MenuItem Name="MenuShowFree" Header="Show Free"/>
+        <MenuItem Name="MenuShowMatches" Header="Show Matches"/>
+        <Separator/>
+        <MenuItem Name="MenuHideLevel" Header="Hide level"/>
+        <MenuItem Name="MenuUnhideLevel" Header="Unhide level"/>
       </MenuItem>
       <MenuItem Header="Help">
-        <MenuItem Name="MenuAbout" Header="About" />
+        <MenuItem Name="MenuAbout" Header="About"/>
       </MenuItem>
     </Menu>
     <Grid HorizontalAlignment="Center"
@@ -57,11 +50,8 @@
                 <ContentPresenter/>
               </ControlTemplate>
             </Button.Template>
-            <TextBlock Name="CardName"
-                       Cursor="Hand"
-                       Foreground="Blue"
-                       TextDecorations="Underline"
-                       VerticalAlignment="Bottom" />
+            <TextBlock Name="CardName" Cursor="Hand" VerticalAlignment="Bottom"
+                       Foreground="Blue" TextDecorations="Underline"/>
           </Button>
         </StackPanel>
       </StatusBarItem>

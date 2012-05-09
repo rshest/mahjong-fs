@@ -10,6 +10,7 @@
 //============================================================================================
 //  General utils
 //============================================================================================
+//  Shuffles array in-place (good old Fished-Yites)
 let shuffle arr =
   let a = arr |> Array.copy
   let rand = new System.Random()
@@ -21,12 +22,14 @@ let shuffle arr =
   a |> Array.iteri flip
   a
 
+//  returns Some(index) of the last element in array satisfying the predicate, None if none found
 let tryFindLastIndexi f (array : _[]) = 
   let rec searchFrom n = 
     if n < 0 then None 
     elif f n array.[n] then Some n else searchFrom (n - 1)
   searchFrom (array.Length - 1)
 
+//  the same as Array.choose, but also passes the index into the predicate
 let choosei f (array: _[]) =
   let res = new System.Collections.Generic.List<_>()
   for i = 0 to array.Length - 1 do 
@@ -36,14 +39,16 @@ let choosei f (array: _[]) =
       | None -> ignore()
   res.ToArray()
 
+//  creates the sequence by replicating the original one given amount of times
 let replicate numTimes s = 
   seq {for i in [1..numTimes] do yield! s}
 
-let rec tryMap maxDepth f arr = 
-  match maxDepth, (f arr) with
+//  tries to apply function to the argument until it returns Some() option (at most 'maxDepth' times)
+let rec tryApply maxDepth f arg = 
+  match maxDepth, (f arg) with
   | 0, _ -> None
   | _, Some s -> Some s
-  | _, None -> tryMap (maxDepth - 1) f arr
+  | _, None -> tryApply (maxDepth - 1) f arg
 
 //============================================================================================
 //  UI/Drawing
@@ -233,11 +238,8 @@ let getMatches (ids:int[]) coords states =
       | _ -> 0) free) > 1)
   |> Seq.toList
 
-let arrangeRandom types =
-  types
-  |> replicate 4
-  |> Seq.toArray
-  |> shuffle
+let arrangeRandom (coords:(int*int*int)[]) (cardTypes:int[]) = 
+  Some(cardTypes |> shuffle)
 
 let tryArrangeSolvable (coords:(int*int*int)[]) (cardTypes:int[]) = 
   let cardPairTypes =
@@ -264,14 +266,16 @@ let tryArrangeSolvable (coords:(int*int*int)[]) (cardTypes:int[]) =
   let numCards = Seq.length cardTypes
   if ids.Length <> numCards then None else Some ids
 
-let shuffleVisible coords (ids:int[]) (states:CardState[]) =
+let MAX_ARRANGE_ATTEMPTS = 50
+
+let shuffleVisible coords (ids:int[]) (states:CardState[]) shuffleFn =
   let isVisible = (function | i, id when states.[i] = Visible -> Some id | _ -> None)
   let shuffled = 
     ids
     |> choosei isVisible
-    |> tryMap 50 (tryArrangeSolvable (choosei isVisible coords))
+    |> tryApply MAX_ARRANGE_ATTEMPTS (shuffleFn (choosei isVisible coords))
   match shuffled with
-  | Some s -> 
+  | Some (s:int[]) -> 
     ids 
     |> Array.zip3 states [|0..(states.Length - 1)|] 
     |> Array.filter (fun (st, _, _) -> st = Visible)
@@ -283,24 +287,12 @@ let genCardCoords layoutID =
   |> parseLayout 
   |> Array.sortBy (fun (x, y, h) -> x + y + h*1000)
 
-let arrangeCards coords =
-  let cardTypes = 
-    [|1..numCardTypes|] 
-    |> shuffle 
-    |> Seq.truncate ((Array.length coords)/4)
-    |> replicate 4
-    |> Seq.toArray
-    |> tryMap 32 (tryArrangeSolvable coords)
-  match cardTypes with
-  | Some s -> s
-  | None -> MessageBox.Show "Not possible to create solvable position!" |> ignore; Array.empty
-
 let getMaxLevel coords = 
   let  _, _, m = coords |> Array.maxBy (fun (_, _, h) -> h)
   m
   
 //============================================================================================
-//  MUTABLE STATE
+//  GAME DATA STRUCTURE
 //============================================================================================
 type Game = 
   { cardCoords: (int*int*int)[]
@@ -313,7 +305,14 @@ type Game =
 
 let newGame layoutID =
   let coords = genCardCoords layoutID
-  let ids = arrangeCards coords 
+  let states = Array.init coords.Length (fun _ -> Visible)
+  let ids = 
+    [|1..numCardTypes|] 
+    |> shuffle 
+    |> Seq.truncate ((Array.length coords)/4)
+    |> replicate 4
+    |> Seq.toArray
+  shuffleVisible coords ids states tryArrangeSolvable
   let controls = 
     coords
     |> Array.zip ids
@@ -323,14 +322,18 @@ let newGame layoutID =
     |> Array.iter (fun (bg, fg) -> canvas.Children.Add(bg) |> ignore
                                    canvas.Children.Add(fg) |> ignore)
   { cardCoords =  coords
-    cardStates = Array.init coords.Length (fun _ -> Visible)
+    cardStates = states
     curSelected = None
     moves = []
     cardIDs = ids
     numHiddenLevels = 0
     cardControls = controls }
 
+//============================================================================================
+//  MUTABLE STATE
+//============================================================================================
 let mutable game = newGame ((new System.Random()).Next(0, Array.length layouts))
+
 //============================================================================================
 //  GAME CODE
 //============================================================================================
@@ -390,7 +393,7 @@ let handleClick (mx, my) =
         game <- newGame 0
       elif ((getMatches game.cardIDs game.cardCoords game.cardStates).Length = 0) then 
         MessageBox.Show "No more possible moves. You've lost, sorry" |> ignore
-        shuffleVisible game.cardCoords game.cardIDs game.cardStates
+        shuffleVisible game.cardCoords game.cardIDs game.cardStates tryArrangeSolvable
         updateCardVisuals()
   | Some c, None -> 
       setCardState Selected c
@@ -418,7 +421,9 @@ let bindMenuItem (name, fn) =
 let HELP_URL = @"http://en.wikipedia.org/wiki/Mahjong_solitaire"
 
 [ "MenuUndo", undoMove
-  "MenuShuffle", fun _ -> shuffleVisible game.cardCoords game.cardIDs game.cardStates
+  "MenuShuffleSolvable", fun _ -> shuffleVisible game.cardCoords game.cardIDs game.cardStates tryArrangeSolvable
+                                  updateCardVisuals()
+  "MenuShuffle", fun _ -> shuffleVisible game.cardCoords game.cardIDs game.cardStates arrangeRandom
                           updateCardVisuals()
   "MenuShowFree", showFree
   "MenuShowMatches", showMatches
