@@ -1,3 +1,4 @@
+http://en.wikipedia.org/wiki/Ceylon_(programming_language)|Ceylon
 http://en.wikipedia.org/wiki/Lua_(programming_language)|Lua
 http://en.wikipedia.org/wiki/Erlang_(programming_language)|Erlang
 http://en.wikipedia.org/wiki/Clojure|Clojure
