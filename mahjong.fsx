@@ -1,4 +1,4 @@
-﻿//  Simple Mahjong solitaire game
+﻿//  Mahjong solitaire game script
 //  2011, Ruslan Shestopalyuk
 
 #r "WindowsBase"
@@ -19,61 +19,63 @@ open System.IO
 //============================================================================================
 //  General utils
 //============================================================================================
-//  Shuffles array in-place (good old Fisher-Yates)
-let shuffle arr =
-  let a = arr |> Array.copy
-  let rand = new System.Random()
-  let flip i _ =
-    let j = rand.Next(i, Array.length arr)
-    let tmp = a.[i]
-    a.[i] <- a.[j]
-    a.[j] <- tmp
-  a |> Array.iteri flip
-  a
+module Utils =
+    //  Shuffles array in-place (good old Fisher-Yates)
+    let shuffle arr =
+      let a = arr |> Array.copy
+      let rand = new System.Random()
+      let flip i _ =
+        let j = rand.Next(i, Array.length arr)
+        let tmp = a.[i]
+        a.[i] <- a.[j]
+        a.[j] <- tmp
+      a |> Array.iteri flip
+      a
 
-//  returns Some(index) of the last element in array satisfying the predicate, None if none found
-let tryFindLastIndexi f (array : _[]) = 
-  let rec searchFrom n = 
-    if n < 0 then None 
-    elif f n array.[n] then Some n else searchFrom (n - 1)
-  searchFrom (array.Length - 1)
+    //  returns Some(index) of the last element in array satisfying the predicate, None if none found
+    let tryFindLastIndexi f (array : _[]) = 
+      let rec searchFrom n = 
+        if n < 0 then None 
+        elif f n array.[n] then Some n else searchFrom (n - 1)
+      searchFrom (array.Length - 1)
 
-//  the same as Array.choose, but also passes the index into the predicate
-let choosei f (array: _[]) =
-  let res = new System.Collections.Generic.List<_>()
-  for i = 0 to array.Length - 1 do 
-      let x = array.[i] 
-      match f (i, x) with
-      | Some v -> res.Add(v)
-      | None -> ignore()
-  res.ToArray()
+    //  the same as Array.choose, but also passes the index into the predicate
+    let choosei f (array: _[]) =
+      let res = new System.Collections.Generic.List<_>()
+      for i = 0 to array.Length - 1 do 
+          let x = array.[i] 
+          match f (i, x) with
+          | Some v -> res.Add(v)
+          | None -> ignore()
+      res.ToArray()
 
-//  creates the sequence by replicating the original one given amount of times
-let replicate numTimes s = 
-  seq {for i in [1..numTimes] do yield! s}
+    //  creates the sequence by replicating the original one given amount of times
+    let replicate numTimes s = 
+      seq {for i in [1..numTimes] do yield! s}
 
-//  tries to apply function to the argument until it returns Some() option (at most 'maxDepth' times)
-let rec tryApply maxDepth f arg = 
-  match maxDepth, (f arg) with
-  | 0, _ -> None
-  | _, Some s -> Some s
-  | _, None -> tryApply (maxDepth - 1) f arg
+    //  tries to apply function to the argument until it returns Some() option (at most 'maxDepth' times)
+    let rec tryApply maxDepth f arg = 
+      match maxDepth, (f arg) with
+      | 0, _ -> None
+      | _, Some s -> Some s
+      | _, None -> tryApply (maxDepth - 1) f arg
 
-//============================================================================================
-//  UI/Drawing
-//============================================================================================
-let fullPath file = __SOURCE_DIRECTORY__ + "/"+ file
+    //  returns the full path of a file located in the same directory as the script
+    let fullPath file = __SOURCE_DIRECTORY__ + "/"+ file
 
 type StoneState =
   | Visible
   | Selected
   | Hidden
 
+//============================================================================================
+//  UI/Drawing
+//============================================================================================
 let loadXamlWindow (filename:string) =
   let reader = XmlReader.Create(filename)
   XamlReader.Load(reader) :?> Window
 
-let window = loadXamlWindow(fullPath "mahjong.xaml")
+let window = loadXamlWindow(Utils.fullPath "mahjong.xaml")
 window.Show()
 let canvas = window.FindName("BoardCanvas") :?> Canvas
 
@@ -86,7 +88,7 @@ type SpriteAtlas = {
 }
 
 let spriteBrush atlas id =
-  let imgSource = new BitmapImage(new Uri(fullPath atlas.File))
+  let imgSource = new BitmapImage(new Uri(Utils.fullPath atlas.File))
   let stoneW, stoneH = 1./(float atlas.Cols), 1./(float atlas.Rows)
   let viewBox = new Rect(stoneW*(float (id % atlas.Cols)), 
                          stoneH*(float (id / atlas.Cols)), stoneW, stoneH)
@@ -95,8 +97,8 @@ let spriteBrush atlas id =
 let bgAtlas = { File = "stones_bg.png"; Cols = 2; Rows = 1; FrameWidth = 74.; FrameHeight = 85.; }
 let fgAtlas = { File = "stones_fg.png"; Cols = 12; Rows = 9; FrameWidth = 64.; FrameHeight = 60.; }
 
-let updateStoneControl stoneControls id state = 
-  let (bg:Rectangle), (fg:Rectangle) = stoneControls
+let updateStoneControl stoneControl id state = 
+  let (bg:Rectangle), (fg:Rectangle) = stoneControl
   let spriteID = if state = Selected then 1 else 0
   let selBrush = spriteBrush bgAtlas spriteID
   match state with
@@ -114,27 +116,37 @@ let setStoneOpacity opacity (fg:Rectangle, bg:Rectangle) =
 let STONE_EXTENTS = 64., 75.
 let STONE_3D_OFFSET = -7., -10.
 
-let getStoneCoords (i, j, level) =
+let getStoneCoords (i, j, layer) =
   let lx, ly = STONE_3D_OFFSET
   let sx, sy = STONE_EXTENTS
-  let x = (float i)*sx*0.5 + (float level)*lx
-  let y = (float j)*sy*0.5 + (float level)*ly
+  let x = (float i)*sx*0.5 + (float layer)*lx
+  let y = (float j)*sy*0.5 + (float layer)*ly
   (x, y, sx - lx, sy - ly)
 
-let createStoneControls (id, (i, j, level)) =
-  let (x, y, _, _) = getStoneCoords(i, j, level)
-  let bg = new Rectangle(Width=bgAtlas.FrameWidth, Height=bgAtlas.FrameHeight)
-  Canvas.SetLeft(bg, x)
-  Canvas.SetTop(bg, y)   
-  let fg = new Rectangle(Width=fgAtlas.FrameWidth, Height=fgAtlas.FrameHeight)
-  Canvas.SetLeft(fg, x + 2.)
-  Canvas.SetTop(fg, y + 10.)
-  let stoneControls = (bg, fg)
-  updateStoneControl stoneControls id Visible
-  stoneControls
+let createStoneControls stoneDataArr =
+  let createControlPair (id, (i, j, layer)) =
+    let (x, y, _, _) = getStoneCoords(i, j, layer)
+    let bg = new Rectangle(Width=bgAtlas.FrameWidth, Height=bgAtlas.FrameHeight)
+    Canvas.SetLeft(bg, x)
+    Canvas.SetTop(bg, y)   
+    let fg = new Rectangle(Width=fgAtlas.FrameWidth, Height=fgAtlas.FrameHeight)
+    Canvas.SetLeft(fg, x + 2.)
+    Canvas.SetTop(fg, y + 10.)
+    let controls = (bg, fg)
+    updateStoneControl controls id Visible
+    controls
+
+  canvas.Children.Clear()
+  stoneDataArr 
+    |> Array.map createControlPair 
+    |> Array.map (fun (bg, fg) -> 
+                    canvas.Children.Add(bg) |> ignore
+                    canvas.Children.Add(fg) |> ignore
+                    (bg, fg))
+
 
 //============================================================================================
-//  Layouts  
+//  Loading game data from the text files  
 //============================================================================================
 let parseLayout (str:string) =   
   let charToHeight ch = 
@@ -148,40 +160,40 @@ let parseLayout (str:string) =
     str.Split('\n') 
     |> Array.map strToRow
     |> Array.filter (fun r -> r.Length <> 0)
-  let maxLevel = 
+  let maxLayer = 
     layout 
     |> Array.maxBy Array.max 
     |> Array.max
   seq {
     let l = Array.copy layout
     let shifts = [|0, 0; 1, 0; 0, 1; 1, 1|]
-    for level in maxLevel .. -1 .. 1 do
+    for layer in maxLayer .. -1 .. 1 do
       for row in 0 .. layout.Length - 2 do
         for col in 0 .. layout.[row].Length - 2 do
-        let isBlock = Array.forall (fun (x,y) -> l.[row + x].[col + y] = level) shifts
+        let isBlock = Array.forall (fun (x,y) -> l.[row + x].[col + y] = layer) shifts
         if isBlock then
-          yield (col, row, level)
-          shifts |> Array.iter (fun (x, y) -> l.[row + x].[col + y] <- level - 1) 
+          yield (col, row, layer)
+          shifts |> Array.iter (fun (x, y) -> l.[row + x].[col + y] <- layer - 1) 
   } |> Seq.toArray
 
 let layouts = 
   let splitSections (res, s) (line:string) = 
     if line.StartsWith("-") then (s::res, "") else (res, s + "\n" + line)
   seq {
-      use sr = new StreamReader(fullPath "layouts.txt")
+      use sr = new StreamReader(Utils.fullPath "layouts.txt")
       while not sr.EndOfStream do yield sr.ReadLine()
   } |> Seq.fold splitSections ([],"") 
     |> fst 
     |> List.rev 
     |> List.filter (fun l -> l.Length > 0) 
     |> List.toArray 
-    |> choosei (function | i, x when i%2 = 1 -> Some x | _ -> None)
+    |> Utils.choosei (function | i, x when i%2 = 1 -> Some x | _ -> None)
     |> Array.map parseLayout
     |> Array.map (Array.sortBy (fun (x, y, h) -> x + y + h*1000))
 
 let langs = 
   seq {
-        use sr = new StreamReader(fullPath "languages.txt")
+        use sr = new StreamReader(Utils.fullPath "languages.txt")
         while not sr.EndOfStream do yield sr.ReadLine()
     } 
     |> Seq.map (fun s -> s.Trim().Split('|'))
@@ -191,8 +203,9 @@ let langs =
 
 let numStoneTypes = Array.length langs
 //============================================================================================
-//  CARD FUNCTIONS
+//  Stone manipulation utilities
 //============================================================================================
+//  returns function which checks if given stone is free (using a cached hash table)
 let isFree coords = 
   //  create hash table with coordinates to quickly find neighbors
   let m = System.Collections.Generic.Dictionary()
@@ -200,7 +213,6 @@ let isFree coords =
     [|0, 0; 1, 0; 0, 1; 1, 1|]
     |> Array.iter (fun (dx, dy) -> m.Add((x + dx, y + dy, h), i))
   coords |> Array.iteri addStone
-  //  return function which checks if given stone is free (using the cached hash table)
   fun (states:StoneState[]) stoneID ->
     let (x, y, h) = coords.[stoneID]
     let isBlockedBy offsets = 
@@ -213,11 +225,13 @@ let isFree coords =
     let right = [2, 0, 0; 2, 1, 0]
     not (isBlockedBy top || (isBlockedBy left && isBlockedBy right))
 
+//  returns a list of free stone indices
 let getFree coords (states:StoneState[]) =
   [0 .. states.Length - 1]
   |> List.filter (fun i -> states.[i] <> Hidden)
   |> List.filter (isFree coords states)
 
+//  returns a list of stone indices that have removable matches  
 let getMatches (ids:int[]) coords states = 
   let free = getFree coords states 
   free
@@ -229,14 +243,14 @@ let getMatches (ids:int[]) coords states =
   |> Seq.toList
 
 let arrangeRandom (coords:(int*int*int)[]) (stoneTypes:int[]) = 
-  Some(stoneTypes |> shuffle)
+  Some(stoneTypes |> Utils.shuffle)
 
 let tryArrangeSolvable (coords:(int*int*int)[]) (stoneTypes:int[]) = 
   let stonePairTypes =
     stoneTypes
     |> Array.sort
-    |> choosei (function | i, x when i%2 = 0 -> Some x | _ -> None)
-    |> shuffle
+    |> Utils.choosei (function | i, x when i%2 = 0 -> Some x | _ -> None)
+    |> Utils.shuffle
   let isFree' = isFree coords
   let s = seq { 
     let states = [|for x in 1 .. coords.Length do yield Visible|]    
@@ -246,7 +260,7 @@ let tryArrangeSolvable (coords:(int*int*int)[]) (stoneTypes:int[]) =
         |> List.filter (fun x -> states.[x] = Visible)
         |> List.filter (isFree' states)
         |> List.toArray
-        |> shuffle
+        |> Utils.shuffle
         |> Seq.truncate 2
         |> Seq.map (fun x -> (x, c))
       nextFree |> Seq.iteri (fun i (x, c) -> states.[x] <- Hidden)
@@ -262,8 +276,8 @@ let shuffleVisible coords (ids:int[]) (states:StoneState[]) shuffleFn =
   let isVisible = (function | i, id when states.[i] = Visible -> Some id | _ -> None)
   let shuffled = 
     ids
-    |> choosei isVisible
-    |> tryApply MAX_ARRANGE_ATTEMPTS (shuffleFn (choosei isVisible coords))
+    |> Utils.choosei isVisible
+    |> Utils.tryApply MAX_ARRANGE_ATTEMPTS (shuffleFn (Utils.choosei isVisible coords))
   match shuffled with
   | Some (s:int[]) -> 
     ids 
@@ -272,7 +286,7 @@ let shuffleVisible coords (ids:int[]) (states:StoneState[]) shuffleFn =
     |> Array.iteri (fun i (_, idx, _) -> ids.[idx] <- s.[i])
   | None -> MessageBox.Show "Not possible to create solvable position!" |> ignore
 
-let getMaxLevel coords = 
+let getMaxLayer coords = 
   let  _, _, m = coords |> Array.maxBy (fun (_, _, h) -> h)
   m
   
@@ -286,32 +300,28 @@ type Game =
     stoneControls:(Rectangle*Rectangle)[] 
     mutable curSelected:int option
     mutable moves:int list
-    mutable numHiddenLevels: int }
+    mutable numHiddenLayers: int }
 
 let newGame layoutID =
   let coords = layouts.[layoutID]
   let states = Array.init coords.Length (fun _ -> Visible)
   let ids = 
     [|1..numStoneTypes|] 
-    |> shuffle 
+    |> Utils.shuffle 
     |> Seq.truncate ((Array.length coords)/4)
-    |> replicate 4
+    |> Utils.replicate 4
     |> Seq.toArray
   shuffleVisible coords ids states tryArrangeSolvable
   let controls = 
     coords
     |> Array.zip ids
-    |> Array.map createStoneControls
-  canvas.Children.Clear()
-  controls 
-    |> Array.iter (fun (bg, fg) -> canvas.Children.Add(bg) |> ignore
-                                   canvas.Children.Add(fg) |> ignore)
+    |> createStoneControls
   { stoneCoords =  coords
     stoneStates = states
     curSelected = None
     moves = []
     stoneIDs = ids
-    numHiddenLevels = 0
+    numHiddenLayers = 0
     stoneControls = controls }
 
 //============================================================================================
@@ -338,7 +348,7 @@ let undoMove () =
 let pickStone mx my = 
     game.stoneCoords 
     |> Array.map getStoneCoords 
-    |> tryFindLastIndexi (fun n (x, y, w, h) -> 
+    |> Utils.tryFindLastIndexi (fun n (x, y, w, h) -> 
       game.stoneStates.[n] <> Hidden && mx > x && my > y && mx < x + w && my < y + h)
 
 let unselectAll () = 
@@ -347,12 +357,12 @@ let unselectAll () =
     |> Array.filter (fun i -> game.stoneStates.[i] <> Hidden) 
     |> Array.iter (setStoneState Visible)
 
-let hideLevels num = 
-  let maxLevel = getMaxLevel game.stoneCoords
-  if num >= 0 && num < maxLevel then
-    game.numHiddenLevels <- num
+let hideLayers num = 
+  let maxLayer = getMaxLayer game.stoneCoords
+  if num >= 0 && num < maxLayer then
+    game.numHiddenLayers <- num
     game.stoneCoords |> Array.iteri (fun i (_, _, h) -> 
-      setStoneOpacity (if h <= maxLevel - num then 1.0 else 0.2) game.stoneControls.[i])
+      setStoneOpacity (if h <= maxLayer - num then 1.0 else 0.2) game.stoneControls.[i])
 
 let showFree () =  
   unselectAll ()
@@ -391,6 +401,7 @@ let handleClick (mx, my) =
 let startGame id = 
   fun _ -> game <- newGame id
 
+
 //============================================================================================
 //  User Input
 //============================================================================================
@@ -415,8 +426,8 @@ let HELP_URL = @"http://en.wikipedia.org/wiki/Mahjong_solitaire"
                           updateStoneControls()
   "MenuShowFree", showFree
   "MenuShowMatches", showMatches
-  "MenuHideLevel", fun _ -> hideLevels (game.numHiddenLevels + 1)
-  "MenuUnhideLevel", fun _ -> hideLevels (game.numHiddenLevels - 1)
+  "MenuHideLayer", fun _ -> hideLayers (game.numHiddenLayers + 1)
+  "MenuUnhideLayer", fun _ -> hideLayers (game.numHiddenLayers - 1)
   "MenuRandom", startGame ((new System.Random()).Next(0, Array.length layouts))
   "MenuTurtle", startGame 0
   "MenuDragon", startGame 1

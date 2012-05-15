@@ -28,8 +28,8 @@
         <MenuItem Name="MenuShowFree" Header="Show Free"/>
         <MenuItem Name="MenuShowMatches" Header="Show Matches"/>
         <Separator/>
-        <MenuItem Name="MenuHideLevel" Header="Hide level"/>
-        <MenuItem Name="MenuUnhideLevel" Header="Unhide level"/>
+        <MenuItem Name="MenuHideLayer" Header="Hide layer"/>
+        <MenuItem Name="MenuUnhideLayer" Header="Unhide layer"/>
       </MenuItem>
       <MenuItem Header="Help">
         <MenuItem Name="MenuAbout" Header="About"/>
