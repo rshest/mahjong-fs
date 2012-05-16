@@ -1,5 +1,5 @@
 ﻿//  Mahjong solitaire game script
-//  2011, Ruslan Shestopalyuk
+//  2012, Ruslan Shestopalyuk
 
 #r "WindowsBase"
 #r "PresentationCore"
@@ -20,7 +20,7 @@ open System.IO
 //  General utils
 //============================================================================================
 module Utils =
-    //  Shuffles array in-place (good old Fisher-Yates)
+    //  Shuffles array in-place (using Fisher-Yates)
     let shuffle arr =
       let a = arr |> Array.copy
       let rand = new System.Random()
@@ -71,7 +71,7 @@ type StoneState =
 let STONE_EXTENTS = 64., 75.
 let STONE_3D_OFFSET = -7., -10.
 
-let getStoneLocations (i, j, layer) =
+let getStoneLocation (i, j, layer) =
   let lx, ly = STONE_3D_OFFSET
   let sx, sy = STONE_EXTENTS
   let x = (float i)*sx*0.5 + (float layer)*lx
@@ -120,13 +120,9 @@ let updateStoneControl stoneControl id state =
     | _ -> spriteBrush fgAtlas id
   fg.Fill <- imgBrush
 
-let setStoneOpacity opacity (fg:Rectangle, bg:Rectangle) =
-    fg.Opacity <- opacity; bg.Opacity <- opacity;
-
-
 let createStoneControls stoneDataArr =
   let createControlPair (id, (i, j, layer)) =
-    let (x, y, _, _) = getStoneLocations(i, j, layer)
+    let (x, y, _, _) = getStoneLocation(i, j, layer)
     let bg = new Rectangle(Width=bgAtlas.FrameWidth, Height=bgAtlas.FrameHeight)
     Canvas.SetLeft(bg, x)
     Canvas.SetTop(bg, y)   
@@ -144,6 +140,9 @@ let createStoneControls stoneDataArr =
                     canvas.Children.Add(bg) |> ignore
                     canvas.Children.Add(fg) |> ignore
                     (bg, fg))
+
+let setStoneOpacity opacity (fg:Rectangle, bg:Rectangle) =
+    fg.Opacity <- opacity; bg.Opacity <- opacity;
 
 //============================================================================================
 //  Loading game data from the text files  
@@ -191,7 +190,7 @@ let layouts =
     |> Array.map parseLayout
     |> Array.map (Array.sortBy (fun (x, y, h) -> x + y + h*1000))
 
-let langs = 
+let languages = 
   seq {
         use sr = new StreamReader(Utils.fullPath "languages.txt")
         while not sr.EndOfStream do yield sr.ReadLine()
@@ -293,19 +292,20 @@ let getMaxLayer coords =
 //  Game data structure
 //============================================================================================
 type Game = 
-  { stoneCoords: (int*int*int)[]
-    stoneStates: StoneState[]
-    stoneIDs: int[]
-    stoneControls:(Rectangle*Rectangle)[] 
-    mutable curSelected:int option
-    mutable moves:int list
-    mutable numHiddenLayers: int }
+  { StoneCoords: (int*int*int)[]
+    StoneIDs: int[]
+    //  mutable part    
+    StoneStates: StoneState[]
+    mutable Moves:int list
+    StoneControls:(Rectangle*Rectangle)[] 
+    mutable CurSelected:int option
+    mutable NumHiddenLayers: int }
 
 let newGame layoutID =
   let coords = layouts.[layoutID]
   let states = Array.init coords.Length (fun _ -> Visible)
   let ids = 
-    [|0..(Array.length langs)|] 
+    [|0..(Array.length languages)|] 
     |> Utils.shuffle 
     |> Seq.truncate ((Array.length coords)/4)
     |> Utils.replicate 4
@@ -315,16 +315,16 @@ let newGame layoutID =
     coords
     |> Array.zip ids
     |> createStoneControls
-  { stoneCoords =  coords
-    stoneStates = states
-    curSelected = None
-    moves = []
-    stoneIDs = ids
-    numHiddenLayers = 0
-    stoneControls = controls }
+  { StoneCoords =  coords
+    StoneStates = states
+    CurSelected = None
+    Moves = []
+    StoneIDs = ids
+    NumHiddenLayers = 0
+    StoneControls = controls }
 
 //============================================================================================
-//  MUTABLE STATE
+//  Game state
 //============================================================================================
 let mutable game = newGame ((new System.Random()).Next(0, Array.length layouts))
 
@@ -332,74 +332,73 @@ let mutable game = newGame ((new System.Random()).Next(0, Array.length layouts))
 //  Game logic
 //============================================================================================
 let updateStoneControls () =
-  game.stoneStates 
-  |> Array.iteri (fun i state -> updateStoneControl game.stoneControls.[i] game.stoneIDs.[i] state)
+  game.StoneStates 
+  |> Array.iteri (fun i state -> updateStoneControl game.StoneControls.[i] game.StoneIDs.[i] state)
   
 let setStoneState state idx =
-  game.stoneStates.[idx] <- state
-  updateStoneControl game.stoneControls.[idx] game.stoneIDs.[idx] state
+  game.StoneStates.[idx] <- state
+  updateStoneControl game.StoneControls.[idx] game.StoneIDs.[idx] state
 
 let undoMove () = 
-  match game.moves with
-  | a::b::rest -> game.moves <- rest; setStoneState Visible a; setStoneState Visible b;
+  match game.Moves with
+  | a::b::rest -> game.Moves <- rest; setStoneState Visible a; setStoneState Visible b;
   | _ -> ()
 
 let pickStone mx my = 
-    game.stoneCoords 
-    |> Array.map getStoneLocations 
+    game.StoneCoords 
+    |> Array.map getStoneLocation
     |> Utils.tryFindLastIndexi (fun n (x, y, w, h) -> 
-      game.stoneStates.[n] <> Hidden && mx > x && my > y && mx < x + w && my < y + h)
+      game.StoneStates.[n] <> Hidden && mx > x && my > y && mx < x + w && my < y + h)
 
 let unselectAll () = 
-    game.curSelected <- None
-    [|0 .. game.stoneCoords.Length - 1|] 
-    |> Array.filter (fun i -> game.stoneStates.[i] <> Hidden) 
+    game.CurSelected <- None
+    [|0 .. game.StoneCoords.Length - 1|] 
+    |> Array.filter (fun i -> game.StoneStates.[i] <> Hidden) 
     |> Array.iter (setStoneState Visible)
 
 let hideLayers num = 
-  let maxLayer = getMaxLayer game.stoneCoords
+  let maxLayer = getMaxLayer game.StoneCoords
   if num >= 0 && num < maxLayer then
-    game.numHiddenLayers <- num
-    game.stoneCoords |> Array.iteri (fun i (_, _, h) -> 
-      setStoneOpacity (if h <= maxLayer - num then 1.0 else 0.2) game.stoneControls.[i])
+    game.NumHiddenLayers <- num
+    game.StoneCoords |> Array.iteri (fun i (_, _, h) -> 
+      setStoneOpacity (if h <= maxLayer - num then 1.0 else 0.2) game.StoneControls.[i])
 
 let showFree () =  
   unselectAll ()
-  getFree game.stoneCoords game.stoneStates |> List.iter (setStoneState Selected)
+  getFree game.StoneCoords game.StoneStates |> List.iter (setStoneState Selected)
 
 let showMatches () = 
   unselectAll ()
-  getMatches game.stoneIDs game.stoneCoords game.stoneStates |> List.iter (setStoneState Selected)
+  getMatches game.StoneIDs game.StoneCoords game.StoneStates |> List.iter (setStoneState Selected)
 
 let handleClick (mx, my) = 
   let stone = match pickStone mx my with
-              | Some stoneIdx when (isFree game.stoneCoords game.stoneStates stoneIdx) -> Some stoneIdx
+              | Some stoneIdx when (isFree game.StoneCoords game.StoneStates stoneIdx) -> Some stoneIdx
               | _ -> None
-  match stone, game.curSelected with
+  match stone, game.CurSelected with
   | Some c, Some s when c = s -> unselectAll ()
-  | Some c, Some s when game.stoneIDs.[c] = game.stoneIDs.[s] -> 
+  | Some c, Some s when game.StoneIDs.[c] = game.StoneIDs.[s] -> 
       unselectAll () 
       setStoneState Hidden c 
       setStoneState Hidden s 
-      game.moves <- c::s::game.moves;
-      if (game.stoneStates |> Array.forall (fun st -> st = Hidden)) then 
+      game.Moves <- c::s::game.Moves;
+      if (game.StoneStates |> Array.forall (fun st -> st = Hidden)) then 
         MessageBox.Show "Amazing, you've won in this impossible game!" |> ignore
         game <- newGame 0
-      elif ((getMatches game.stoneIDs game.stoneCoords game.stoneStates).Length = 0) then 
-        MessageBox.Show "No more possible moves. You've lost, sorry" |> ignore
-        shuffleVisible game.stoneCoords game.stoneIDs game.stoneStates tryArrangeSolvable
+      elif ((getMatches game.StoneIDs game.StoneCoords game.StoneStates).Length = 0) then 
+        MessageBox.Show "No more possible Moves. You've lost, sorry" |> ignore
+        shuffleVisible game.StoneCoords game.StoneIDs game.StoneStates tryArrangeSolvable
         updateStoneControls()
   | Some c, None -> 
       setStoneState Selected c
-      game.curSelected <- Some(c)
-      let url, lang = langs.[game.stoneIDs.[c]]
+      game.CurSelected <- Some(c)
+      let url, lang = languages.[game.StoneIDs.[c]]
       let status = window.FindName("StoneName") :?> TextBlock
       status.Text <- lang
   | _, _ -> unselectAll ()
 
 let startGame id = 
   fun _ -> game <- newGame id
-
 
 //============================================================================================
 //  User Input
@@ -419,14 +418,14 @@ let bindMenuItem (name, fn) =
 let HELP_URL = @"http://en.wikipedia.org/wiki/Mahjong_solitaire"
 
 [ "MenuUndo", undoMove
-  "MenuShuffleSolvable", fun _ -> shuffleVisible game.stoneCoords game.stoneIDs game.stoneStates tryArrangeSolvable
+  "MenuShuffleSolvable", fun _ -> shuffleVisible game.StoneCoords game.StoneIDs game.StoneStates tryArrangeSolvable
                                   updateStoneControls()
-  "MenuShuffle", fun _ -> shuffleVisible game.stoneCoords game.stoneIDs game.stoneStates arrangeRandom
+  "MenuShuffle", fun _ -> shuffleVisible game.StoneCoords game.StoneIDs game.StoneStates arrangeRandom
                           updateStoneControls()
   "MenuShowFree", showFree
   "MenuShowMatches", showMatches
-  "MenuHideLayer", fun _ -> hideLayers (game.numHiddenLayers + 1)
-  "MenuUnhideLayer", fun _ -> hideLayers (game.numHiddenLayers - 1)
+  "MenuHideLayer", fun _ -> hideLayers (game.NumHiddenLayers + 1)
+  "MenuUnhideLayer", fun _ -> hideLayers (game.NumHiddenLayers - 1)
   "MenuRandom", startGame ((new System.Random()).Next(0, Array.length layouts))
   "MenuTurtle", startGame 0
   "MenuDragon", startGame 1
@@ -438,7 +437,7 @@ let HELP_URL = @"http://en.wikipedia.org/wiki/Mahjong_solitaire"
 
 let stoneURL = window.FindName("StoneInfoURL") :?> Button
 stoneURL.Click.Add(fun _ -> 
-                    match game.curSelected with
-                    | Some sel -> Diagnostics.Process.Start (fst langs.[game.stoneIDs.[sel]]) |> ignore
+                    match game.CurSelected with
+                    | Some sel -> Diagnostics.Process.Start (fst languages.[game.StoneIDs.[sel]]) |> ignore
                     | None -> ())
 
