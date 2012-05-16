@@ -68,6 +68,16 @@ type StoneState =
   | Selected
   | Hidden
 
+let STONE_EXTENTS = 64., 75.
+let STONE_3D_OFFSET = -7., -10.
+
+let getStoneLocations (i, j, layer) =
+  let lx, ly = STONE_3D_OFFSET
+  let sx, sy = STONE_EXTENTS
+  let x = (float i)*sx*0.5 + (float layer)*lx
+  let y = (float j)*sy*0.5 + (float layer)*ly
+  (x, y, sx - lx, sy - ly)
+
 //============================================================================================
 //  UI/Drawing
 //============================================================================================
@@ -113,19 +123,10 @@ let updateStoneControl stoneControl id state =
 let setStoneOpacity opacity (fg:Rectangle, bg:Rectangle) =
     fg.Opacity <- opacity; bg.Opacity <- opacity;
 
-let STONE_EXTENTS = 64., 75.
-let STONE_3D_OFFSET = -7., -10.
-
-let getStoneCoords (i, j, layer) =
-  let lx, ly = STONE_3D_OFFSET
-  let sx, sy = STONE_EXTENTS
-  let x = (float i)*sx*0.5 + (float layer)*lx
-  let y = (float j)*sy*0.5 + (float layer)*ly
-  (x, y, sx - lx, sy - ly)
 
 let createStoneControls stoneDataArr =
   let createControlPair (id, (i, j, layer)) =
-    let (x, y, _, _) = getStoneCoords(i, j, layer)
+    let (x, y, _, _) = getStoneLocations(i, j, layer)
     let bg = new Rectangle(Width=bgAtlas.FrameWidth, Height=bgAtlas.FrameHeight)
     Canvas.SetLeft(bg, x)
     Canvas.SetTop(bg, y)   
@@ -143,7 +144,6 @@ let createStoneControls stoneDataArr =
                     canvas.Children.Add(bg) |> ignore
                     canvas.Children.Add(fg) |> ignore
                     (bg, fg))
-
 
 //============================================================================================
 //  Loading game data from the text files  
@@ -201,7 +201,6 @@ let langs =
     |> Seq.map (fun el -> (el.[0], el.[1]))
     |> Seq.toArray
 
-let numStoneTypes = Array.length langs
 //============================================================================================
 //  Stone manipulation utilities
 //============================================================================================
@@ -291,7 +290,7 @@ let getMaxLayer coords =
   m
   
 //============================================================================================
-//  GAME DATA STRUCTURE
+//  Game data structure
 //============================================================================================
 type Game = 
   { stoneCoords: (int*int*int)[]
@@ -306,7 +305,7 @@ let newGame layoutID =
   let coords = layouts.[layoutID]
   let states = Array.init coords.Length (fun _ -> Visible)
   let ids = 
-    [|1..numStoneTypes|] 
+    [|0..(Array.length langs)|] 
     |> Utils.shuffle 
     |> Seq.truncate ((Array.length coords)/4)
     |> Utils.replicate 4
@@ -330,7 +329,7 @@ let newGame layoutID =
 let mutable game = newGame ((new System.Random()).Next(0, Array.length layouts))
 
 //============================================================================================
-//  GAME CODE
+//  Game logic
 //============================================================================================
 let updateStoneControls () =
   game.stoneStates 
@@ -347,7 +346,7 @@ let undoMove () =
 
 let pickStone mx my = 
     game.stoneCoords 
-    |> Array.map getStoneCoords 
+    |> Array.map getStoneLocations 
     |> Utils.tryFindLastIndexi (fun n (x, y, w, h) -> 
       game.stoneStates.[n] <> Hidden && mx > x && my > y && mx < x + w && my < y + h)
 
@@ -374,8 +373,8 @@ let showMatches () =
 
 let handleClick (mx, my) = 
   let stone = match pickStone mx my with
-             | Some stoneIdx when (isFree game.stoneCoords game.stoneStates stoneIdx) -> Some stoneIdx
-             | _ -> None
+              | Some stoneIdx when (isFree game.stoneCoords game.stoneStates stoneIdx) -> Some stoneIdx
+              | _ -> None
   match stone, game.curSelected with
   | Some c, Some s when c = s -> unselectAll ()
   | Some c, Some s when game.stoneIDs.[c] = game.stoneIDs.[s] -> 
@@ -393,7 +392,7 @@ let handleClick (mx, my) =
   | Some c, None -> 
       setStoneState Selected c
       game.curSelected <- Some(c)
-      let url, lang = langs.[game.stoneIDs.[c] - 1]
+      let url, lang = langs.[game.stoneIDs.[c]]
       let status = window.FindName("StoneName") :?> TextBlock
       status.Text <- lang
   | _, _ -> unselectAll ()
@@ -440,6 +439,6 @@ let HELP_URL = @"http://en.wikipedia.org/wiki/Mahjong_solitaire"
 let stoneURL = window.FindName("StoneInfoURL") :?> Button
 stoneURL.Click.Add(fun _ -> 
                     match game.curSelected with
-                    | Some sel -> Diagnostics.Process.Start (fst langs.[game.stoneIDs.[sel] - 1]) |> ignore
+                    | Some sel -> Diagnostics.Process.Start (fst langs.[game.stoneIDs.[sel]]) |> ignore
                     | None -> ())
 
