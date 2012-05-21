@@ -20,34 +20,12 @@ open System.IO
 //  General utils
 //============================================================================================
 module Utils =
-  //  Shuffles array in-place (using Fisher-Yates)
-  let shuffle arr =
-    let a = arr |> Array.copy
-    let rand = new System.Random()
-    let flip i _ =
-      let j = rand.Next(i, Array.length arr)
-      let tmp = a.[i]
-      a.[i] <- a.[j]
-      a.[j] <- tmp
-    a |> Array.iteri flip
-    a
-
   //  returns Some(index) of the last element in array satisfying the predicate, None if none found
   let tryFindLastIndexi f (array : _[]) = 
     let rec searchFrom n = 
       if n < 0 then None 
       elif f n array.[n] then Some n else searchFrom (n - 1)
     searchFrom (array.Length - 1)
-
-  //  the same as Array.choose, but also passes the index into the predicate
-  let choosei f (array: _[]) =
-    let res = new System.Collections.Generic.List<_>()
-    for i = 0 to array.Length - 1 do 
-      let x = array.[i] 
-      match f (i, x) with
-      | Some v -> res.Add(v)
-      | None -> ignore()
-    res.ToArray()
 
   //  creates the sequence by replicating the original one given amount of times
   let replicate numTimes s = 
@@ -60,10 +38,34 @@ module Utils =
     | _, Some s -> Some s
     | _, None -> tryApply (maxDepth - 1) f arg
 
+module Array =
+  //  the same as Array.choose, but also passes the index into the predicate  
+  let choosei f (array: _[]) =
+    let res = new System.Collections.Generic.List<_>()
+    for i = 0 to array.Length - 1 do 
+      let x = array.[i] 
+      match f (i, x) with
+      | Some v -> res.Add(v)
+      | None -> ignore()
+    res.ToArray()
+
+  //  Shuffles array in-place (using Fisher-Yates)
+  let shuffle arr =
+    let a = arr |> Array.copy
+    let rand = new System.Random()
+    let flip i _ =
+      let j = rand.Next(i, Array.length arr)
+      let tmp = a.[i]
+      a.[i] <- a.[j]
+      a.[j] <- tmp
+    a |> Array.iteri flip
+    a
+
 type StoneState =
   | Visible
   | Selected
   | Hidden
+
 
 let STONE_EXTENTS = 64., 75.
 let STONE_3D_OFFSET = -7., -10.
@@ -186,7 +188,7 @@ let layouts =
     |> List.rev 
     |> List.filter (fun l -> l.Length > 0) 
     |> List.toArray 
-    |> Utils.choosei (function | i, x when i%2 = 1 -> Some x | _ -> None)
+    |> Array.choosei (function | i, x when i%2 = 1 -> Some x | _ -> None)
     |> Array.map parseLayout
     |> Array.map (Array.sortBy (fun (x, y, h) -> x + y + h*1000))
 
@@ -241,14 +243,14 @@ let getMatches (ids:int[]) coords states =
   |> Seq.toList
 
 let arrangeRandom (coords:(int*int*int)[]) (stoneTypes:int[]) = 
-  Some(stoneTypes |> Utils.shuffle)
+  Some(stoneTypes |> Array.shuffle)
 
 let tryArrangeSolvable (coords:(int*int*int)[]) (stoneTypes:int[]) = 
   let stonePairTypes =
     stoneTypes
     |> Array.sort
-    |> Utils.choosei (function | i, x when i%2 = 0 -> Some x | _ -> None)
-    |> Utils.shuffle
+    |> Array.choosei (function | i, x when i%2 = 0 -> Some x | _ -> None)
+    |> Array.shuffle
   let isFree' = isFree coords
   let s = seq { 
     let states = [|for x in 1 .. coords.Length do yield Visible|]    
@@ -258,7 +260,7 @@ let tryArrangeSolvable (coords:(int*int*int)[]) (stoneTypes:int[]) =
         |> List.filter (fun x -> states.[x] = Visible)
         |> List.filter (isFree' states)
         |> List.toArray
-        |> Utils.shuffle
+        |> Array.shuffle
         |> Seq.truncate 2
         |> Seq.map (fun x -> (x, c))
       nextFree |> Seq.iteri (fun i (x, c) -> states.[x] <- Hidden)
@@ -274,8 +276,8 @@ let shuffleVisible coords (ids:int[]) (states:StoneState[]) shuffleFn =
   let isVisible = (function | i, id when states.[i] = Visible -> Some id | _ -> None)
   let shuffled = 
     ids
-    |> Utils.choosei isVisible
-    |> Utils.tryApply MAX_ARRANGE_ATTEMPTS (shuffleFn (Utils.choosei isVisible coords))
+    |> Array.choosei isVisible
+    |> Utils.tryApply MAX_ARRANGE_ATTEMPTS (shuffleFn (Array.choosei isVisible coords))
   match shuffled with
   | Some (s:int[]) -> 
     ids 
@@ -294,19 +296,94 @@ let getMaxLayer coords =
 type Game = 
   { StoneCoords: (int*int*int)[]
     StoneIDs: int[]
-    //  mutable part    
     StoneStates: StoneState[]
     mutable Moves:int list
     StoneControls:(Rectangle*Rectangle)[] 
     mutable CurSelected:int option
-    mutable NumHiddenLayers: int }
+    mutable NumHiddenLayers: int } with
+
+  member this.shuffleVisible shuffleFn = 
+    shuffleVisible this.StoneCoords this.StoneIDs this.StoneStates shuffleFn
+    this.updateStoneControls()
+
+  member this.updateStoneControls () =
+    this.StoneStates 
+    |> Array.iteri (fun i state -> updateStoneControl this.StoneControls.[i] this.StoneIDs.[i] state)
+  
+  member this.setStoneState state idx =
+    this.StoneStates.[idx] <- state
+    updateStoneControl this.StoneControls.[idx] this.StoneIDs.[idx] state
+
+  member this.undoMove () = 
+    match this.Moves with
+    | a::b::rest -> this.Moves <- rest; this.setStoneState Visible a; this.setStoneState Visible b;
+    | _ -> ()
+
+  member this.pickStone mx my = 
+      this.StoneCoords 
+      |> Array.map getStoneLocation
+      |> Utils.tryFindLastIndexi (fun n (x, y, w, h) -> 
+        this.StoneStates.[n] <> Hidden && mx > x && my > y && mx < x + w && my < y + h)
+
+  member this.unselectAll () = 
+      this.CurSelected <- None
+      [|0 .. this.StoneCoords.Length - 1|] 
+      |> Array.filter (fun i -> this.StoneStates.[i] <> Hidden) 
+      |> Array.iter (this.setStoneState Visible)
+
+  member this.hideLayers delta = 
+    let newHiddenLayers = this.NumHiddenLayers + delta
+    let maxLayer = getMaxLayer this.StoneCoords
+    if newHiddenLayers >= 0 && newHiddenLayers < maxLayer then
+      this.NumHiddenLayers <- newHiddenLayers
+      this.StoneCoords |> Array.iteri (fun i (_, _, h) -> 
+        setStoneOpacity (if h <= maxLayer - newHiddenLayers then 1.0 else 0.2) this.StoneControls.[i])
+
+  member this.showFree () =  
+    this.unselectAll ()
+    getFree this.StoneCoords this.StoneStates |> List.iter (this.setStoneState Selected)
+
+  member this.showMatches () = 
+    this.unselectAll ()
+    getMatches this.StoneIDs this.StoneCoords this.StoneStates |> List.iter (this.setStoneState Selected)
+
+  member this.removeStonePair s1 s2 = 
+    this.unselectAll () 
+    this.setStoneState Hidden s1 
+    this.setStoneState Hidden s2 
+    this.Moves <- s1::s2::this.Moves;
+    if (this.StoneStates |> Array.forall (fun st -> st = Hidden)) then 
+      MessageBox.Show "Amazing, you've won in this impossible game!" |> ignore
+      //game <- newGame 0
+    elif ((getMatches this.StoneIDs this.StoneCoords this.StoneStates).Length = 0) then 
+      MessageBox.Show "No more possible Moves. You've lost, sorry" |> ignore
+      shuffleVisible this.StoneCoords this.StoneIDs this.StoneStates tryArrangeSolvable
+      this.updateStoneControls()
+
+  member this.selectStone s =
+    this.setStoneState Selected s
+    this.CurSelected <- Some(s)
+    let url, lang = languages.[this.StoneIDs.[s]]
+    let status = window.FindName("StoneName") :?> TextBlock
+    status.Text <- lang
+
+  member this.handleClick (mx, my) = 
+    let stone = match this.pickStone mx my with
+                | Some stoneIdx when (isFree this.StoneCoords this.StoneStates stoneIdx) -> Some stoneIdx
+                | _ -> None
+    match stone, this.CurSelected with
+    | Some c, Some s when c = s -> this.unselectAll ()
+    | Some c, Some s when this.StoneIDs.[c] = this.StoneIDs.[s] -> this.removeStonePair c s
+    | Some c, None -> this.selectStone c
+    | _, _ -> this.unselectAll ()
+
 
 let newGame layoutID =
   let coords = layouts.[layoutID]
   let states = Array.init coords.Length (fun _ -> Visible)
   let ids = 
     [|0..(Array.length languages - 1)|] 
-    |> Utils.shuffle 
+    |> Array.shuffle 
     |> Seq.truncate ((Array.length coords)/4)
     |> Utils.replicate 4
     |> Seq.toArray
@@ -323,79 +400,7 @@ let newGame layoutID =
     NumHiddenLayers = 0
     StoneControls = controls }
 
-//============================================================================================
-//  Game state
-//============================================================================================
 let mutable game = newGame ((new System.Random()).Next(0, Array.length layouts))
-
-//============================================================================================
-//  Game logic
-//============================================================================================
-let updateStoneControls () =
-  game.StoneStates 
-  |> Array.iteri (fun i state -> updateStoneControl game.StoneControls.[i] game.StoneIDs.[i] state)
-  
-let setStoneState state idx =
-  game.StoneStates.[idx] <- state
-  updateStoneControl game.StoneControls.[idx] game.StoneIDs.[idx] state
-
-let undoMove () = 
-  match game.Moves with
-  | a::b::rest -> game.Moves <- rest; setStoneState Visible a; setStoneState Visible b;
-  | _ -> ()
-
-let pickStone mx my = 
-    game.StoneCoords 
-    |> Array.map getStoneLocation
-    |> Utils.tryFindLastIndexi (fun n (x, y, w, h) -> 
-      game.StoneStates.[n] <> Hidden && mx > x && my > y && mx < x + w && my < y + h)
-
-let unselectAll () = 
-    game.CurSelected <- None
-    [|0 .. game.StoneCoords.Length - 1|] 
-    |> Array.filter (fun i -> game.StoneStates.[i] <> Hidden) 
-    |> Array.iter (setStoneState Visible)
-
-let hideLayers num = 
-  let maxLayer = getMaxLayer game.StoneCoords
-  if num >= 0 && num < maxLayer then
-    game.NumHiddenLayers <- num
-    game.StoneCoords |> Array.iteri (fun i (_, _, h) -> 
-      setStoneOpacity (if h <= maxLayer - num then 1.0 else 0.2) game.StoneControls.[i])
-
-let showFree () =  
-  unselectAll ()
-  getFree game.StoneCoords game.StoneStates |> List.iter (setStoneState Selected)
-
-let showMatches () = 
-  unselectAll ()
-  getMatches game.StoneIDs game.StoneCoords game.StoneStates |> List.iter (setStoneState Selected)
-
-let handleClick (mx, my) = 
-  let stone = match pickStone mx my with
-              | Some stoneIdx when (isFree game.StoneCoords game.StoneStates stoneIdx) -> Some stoneIdx
-              | _ -> None
-  match stone, game.CurSelected with
-  | Some c, Some s when c = s -> unselectAll ()
-  | Some c, Some s when game.StoneIDs.[c] = game.StoneIDs.[s] -> 
-      unselectAll () 
-      setStoneState Hidden c 
-      setStoneState Hidden s 
-      game.Moves <- c::s::game.Moves;
-      if (game.StoneStates |> Array.forall (fun st -> st = Hidden)) then 
-        MessageBox.Show "Amazing, you've won in this impossible game!" |> ignore
-        game <- newGame 0
-      elif ((getMatches game.StoneIDs game.StoneCoords game.StoneStates).Length = 0) then 
-        MessageBox.Show "No more possible Moves. You've lost, sorry" |> ignore
-        shuffleVisible game.StoneCoords game.StoneIDs game.StoneStates tryArrangeSolvable
-        updateStoneControls()
-  | Some c, None -> 
-      setStoneState Selected c
-      game.CurSelected <- Some(c)
-      let url, lang = languages.[game.StoneIDs.[c]]
-      let status = window.FindName("StoneName") :?> TextBlock
-      status.Text <- lang
-  | _, _ -> unselectAll ()
 
 let startGame id = 
   fun _ -> game <- newGame id
@@ -409,24 +414,21 @@ let events =
   |> Event.filter (fun mi -> (mi.ChangedButton = Input.MouseButton.Left && 
                               mi.ButtonState = Input.MouseButtonState.Pressed))
   |> Event.map (fun mi -> (mi.GetPosition(canvas).X, mi.GetPosition(canvas).Y))
-  |> Event.add handleClick
+  |> Event.add game.handleClick
 
 let bindMenuItem (name, fn) =
   let menuItem = window.FindName(name) :?> MenuItem
   menuItem.Click.Add(fun _ -> fn ())
 
-[<Literal>]
 let HELP_URL = @"http://en.wikipedia.org/wiki/Mahjong_solitaire"
 
-[ "MenuUndo", undoMove
-  "MenuShuffleSolvable", fun _ -> shuffleVisible game.StoneCoords game.StoneIDs game.StoneStates tryArrangeSolvable
-                                  updateStoneControls()
-  "MenuShuffle", fun _ -> shuffleVisible game.StoneCoords game.StoneIDs game.StoneStates arrangeRandom
-                          updateStoneControls()
-  "MenuShowFree", showFree
-  "MenuShowMatches", showMatches
-  "MenuHideLayer", fun _ -> hideLayers (game.NumHiddenLayers + 1)
-  "MenuUnhideLayer", fun _ -> hideLayers (game.NumHiddenLayers - 1)
+[ "MenuUndo", game.undoMove
+  "MenuShuffleSolvable", fun _ -> game.shuffleVisible tryArrangeSolvable
+  "MenuShuffle", fun _ -> game.shuffleVisible arrangeRandom
+  "MenuShowFree", game.showFree
+  "MenuShowMatches", game.showMatches
+  "MenuHideLayer", fun _ -> game.hideLayers 1
+  "MenuUnhideLayer", fun _ -> game.hideLayers -1
   "MenuRandom", startGame ((new System.Random()).Next(0, Array.length layouts))
   "MenuTurtle", startGame 0
   "MenuDragon", startGame 1
