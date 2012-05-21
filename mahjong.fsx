@@ -105,7 +105,7 @@ let spriteBrush atlas id =
   new ImageBrush(ImageSource = imgSource, Viewbox = viewBox)
 
 let bgAtlas = { File = "stones_bg.png"; Cols = 2; Rows = 1; FrameWidth = 74.; FrameHeight = 85.; }
-let fgAtlas = { File = "stones_fg.png"; Cols = 12; Rows = 9; FrameWidth = 64.; FrameHeight = 60.; }
+let fgAtlas = { File = "stones_fg.png"; Cols = 12; Rows = 10; FrameWidth = 64.; FrameHeight = 60.; }
 
 let updateStoneControl stoneControl id state = 
   let (bg:Rectangle), (fg:Rectangle) = stoneControl
@@ -305,7 +305,7 @@ let newGame layoutID =
   let coords = layouts.[layoutID]
   let states = Array.init coords.Length (fun _ -> Visible)
   let ids = 
-    [|0..(Array.length languages)|] 
+    [|0..(Array.length languages - 1)|] 
     |> Utils.shuffle 
     |> Seq.truncate ((Array.length coords)/4)
     |> Utils.replicate 4

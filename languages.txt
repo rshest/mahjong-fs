@@ -114,3 +114,15 @@ http://en.wikipedia.org/wiki/Scumm|SCUMM
 http://en.wikipedia.org/wiki/Racket_(programming_language)|Racket
 http://en.wikipedia.org/wiki/Vala_(programming_language)|Vala
 http://en.wikipedia.org/wiki/Dark_Basic|DarkBASIC
+
+http://programming.nu/index|Nu
+http://en.wikipedia.org/wiki/Arduino|Arduino
+http://en.wikipedia.org/wiki/Turing_(programming_language)|Turing
+http://www.impredicative.com/ur|Ur
+http://projects.puppetlabs.com/projects/puppet/wiki|Puppet
+http://www.mirah.org|Mirah
+http://www.neptune-lang.org|Neptune
+http://en.wikipedia.org/wiki/JADE_(programming_language)|Jade
+http://en.wikipedia.org/wiki/Pike_(programming_language)|Pike
+http://orc.csres.utexas.edu|Orc
+http://www.cs.cornell.edu/jif|Jif
