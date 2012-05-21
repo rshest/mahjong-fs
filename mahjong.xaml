@@ -38,17 +38,15 @@
     <Canvas Grid.Row="1" Name="BoardCanvas" Margin="35,60,30,50" />
     <StatusBar Grid.Row="2">
       <StatusBarItem>
-        <StackPanel Orientation="Horizontal">
-          <Button Name="StoneInfoURL">
-            <Button.Template>
-              <ControlTemplate TargetType="{x:Type Button}">
-                <ContentPresenter/>
-              </ControlTemplate>
-            </Button.Template>
-            <TextBlock Name="StoneName" Cursor="Hand" VerticalAlignment="Bottom"
-                       Foreground="Blue" TextDecorations="Underline"/>
-          </Button>
-        </StackPanel>
+        <Button Name="StoneInfoURL">
+          <Button.Template>
+            <ControlTemplate TargetType="{x:Type Button}">
+              <ContentPresenter/>
+            </ControlTemplate>
+          </Button.Template>
+          <TextBlock Name="StoneName" Cursor="Hand" VerticalAlignment="Bottom"
+                     Foreground="Blue" TextDecorations="Underline"/>
+        </Button>
       </StatusBarItem>
     </StatusBar>
   </Grid>
