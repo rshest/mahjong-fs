@@ -20,48 +20,45 @@ open System.IO
 //  General utils
 //============================================================================================
 module Utils =
-    //  Shuffles array in-place (using Fisher-Yates)
-    let shuffle arr =
-      let a = arr |> Array.copy
-      let rand = new System.Random()
-      let flip i _ =
-        let j = rand.Next(i, Array.length arr)
-        let tmp = a.[i]
-        a.[i] <- a.[j]
-        a.[j] <- tmp
-      a |> Array.iteri flip
-      a
+  //  Shuffles array in-place (using Fisher-Yates)
+  let shuffle arr =
+    let a = arr |> Array.copy
+    let rand = new System.Random()
+    let flip i _ =
+      let j = rand.Next(i, Array.length arr)
+      let tmp = a.[i]
+      a.[i] <- a.[j]
+      a.[j] <- tmp
+    a |> Array.iteri flip
+    a
 
-    //  returns Some(index) of the last element in array satisfying the predicate, None if none found
-    let tryFindLastIndexi f (array : _[]) = 
-      let rec searchFrom n = 
-        if n < 0 then None 
-        elif f n array.[n] then Some n else searchFrom (n - 1)
-      searchFrom (array.Length - 1)
+  //  returns Some(index) of the last element in array satisfying the predicate, None if none found
+  let tryFindLastIndexi f (array : _[]) = 
+    let rec searchFrom n = 
+      if n < 0 then None 
+      elif f n array.[n] then Some n else searchFrom (n - 1)
+    searchFrom (array.Length - 1)
 
-    //  the same as Array.choose, but also passes the index into the predicate
-    let choosei f (array: _[]) =
-      let res = new System.Collections.Generic.List<_>()
-      for i = 0 to array.Length - 1 do 
-          let x = array.[i] 
-          match f (i, x) with
-          | Some v -> res.Add(v)
-          | None -> ignore()
-      res.ToArray()
+  //  the same as Array.choose, but also passes the index into the predicate
+  let choosei f (array: _[]) =
+    let res = new System.Collections.Generic.List<_>()
+    for i = 0 to array.Length - 1 do 
+      let x = array.[i] 
+      match f (i, x) with
+      | Some v -> res.Add(v)
+      | None -> ignore()
+    res.ToArray()
 
-    //  creates the sequence by replicating the original one given amount of times
-    let replicate numTimes s = 
-      seq {for i in [1..numTimes] do yield! s}
+  //  creates the sequence by replicating the original one given amount of times
+  let replicate numTimes s = 
+    seq {for i in [1..numTimes] do yield! s}
 
-    //  tries to apply function to the argument until it returns Some() option (at most 'maxDepth' times)
-    let rec tryApply maxDepth f arg = 
-      match maxDepth, (f arg) with
-      | 0, _ -> None
-      | _, Some s -> Some s
-      | _, None -> tryApply (maxDepth - 1) f arg
-
-    //  returns the full path of a file located in the same directory as the script
-    let fullPath file = __SOURCE_DIRECTORY__ + "/"+ file
+  //  tries to apply function to the argument until it returns Some() option (at most 'maxDepth' times)
+  let rec tryApply maxDepth f arg = 
+    match maxDepth, (f arg) with
+    | 0, _ -> None
+    | _, Some s -> Some s
+    | _, None -> tryApply (maxDepth - 1) f arg
 
 type StoneState =
   | Visible
@@ -81,13 +78,15 @@ let getStoneLocation (i, j, layer) =
 //============================================================================================
 //  UI/Drawing
 //============================================================================================
+//  returns the full path of a file located in the same directory as the script
+let fullPath file = __SOURCE_DIRECTORY__ + "/"+ file
+
 let loadXamlWindow (filename:string) =
   let reader = XmlReader.Create(filename)
   XamlReader.Load(reader) :?> Window
 
-let window = loadXamlWindow(Utils.fullPath "mahjong.xaml")
+let window = loadXamlWindow(fullPath "mahjong.xaml")
 window.Show()
-let canvas = window.FindName("BoardCanvas") :?> Canvas
 
 type SpriteAtlas = { 
   File: string;
@@ -98,7 +97,7 @@ type SpriteAtlas = {
 }
 
 let spriteBrush atlas id =
-  let imgSource = new BitmapImage(new Uri(Utils.fullPath atlas.File))
+  let imgSource = new BitmapImage(new Uri(fullPath atlas.File))
   let stoneW, stoneH = 1./(float atlas.Cols), 1./(float atlas.Rows)
   let viewBox = new Rect(stoneW*(float (id % atlas.Cols)), 
                          stoneH*(float (id / atlas.Cols)), stoneW, stoneH)
@@ -133,6 +132,7 @@ let createStoneControls stoneDataArr =
     updateStoneControl controls id Visible
     controls
 
+  let canvas = window.FindName("BoardCanvas") :?> Canvas
   canvas.Children.Clear()
   stoneDataArr 
     |> Array.map createControlPair 
@@ -148,13 +148,13 @@ let setStoneOpacity opacity (fg:Rectangle, bg:Rectangle) =
 //  Loading game data from the text files  
 //============================================================================================
 let parseLayout (str:string) =   
-  let charToHeight ch = 
+  let charToLayer ch = 
     match Int32.TryParse(string ch) with
     | (true, n) -> n
     | _ -> -1
   let strToRow (s:string) =
     s.TrimEnd(' ').ToCharArray()
-    |> Array.map charToHeight 
+    |> Array.map charToLayer 
   let layout = 
     str.Split('\n') 
     |> Array.map strToRow
@@ -165,21 +165,21 @@ let parseLayout (str:string) =
     |> Array.max
   seq {
     let l = Array.copy layout
-    let shifts = [|0, 0; 1, 0; 0, 1; 1, 1|]
+    let blockOffs = [|0, 0; 1, 0; 0, 1; 1, 1|]
     for layer in maxLayer .. -1 .. 1 do
       for row in 0 .. layout.Length - 2 do
         for col in 0 .. layout.[row].Length - 2 do
-        let isBlock = Array.forall (fun (x,y) -> l.[row + x].[col + y] = layer) shifts
+        let isBlock = Array.forall (fun (x,y) -> l.[row + x].[col + y] = layer) blockOffs
         if isBlock then
           yield (col, row, layer)
-          shifts |> Array.iter (fun (x, y) -> l.[row + x].[col + y] <- layer - 1) 
+          blockOffs |> Array.iter (fun (x, y) -> l.[row + x].[col + y] <- layer - 1) 
   } |> Seq.toArray
 
 let layouts = 
   let splitSections (res, s) (line:string) = 
     if line.StartsWith("-") then (s::res, "") else (res, s + "\n" + line)
   seq {
-      use sr = new StreamReader(Utils.fullPath "layouts.txt")
+      use sr = new StreamReader(fullPath "layouts.txt")
       while not sr.EndOfStream do yield sr.ReadLine()
   } |> Seq.fold splitSections ([],"") 
     |> fst 
@@ -192,7 +192,7 @@ let layouts =
 
 let languages = 
   seq {
-        use sr = new StreamReader(Utils.fullPath "languages.txt")
+        use sr = new StreamReader(fullPath "languages.txt")
         while not sr.EndOfStream do yield sr.ReadLine()
     } 
     |> Seq.map (fun s -> s.Trim().Split('|'))
@@ -404,6 +404,7 @@ let startGame id =
 //  User Input
 //============================================================================================
 let events = 
+  let canvas = window.FindName("BoardCanvas") :?> Canvas
   window.MouseDown
   |> Event.filter (fun mi -> (mi.ChangedButton = Input.MouseButton.Left && 
                               mi.ButtonState = Input.MouseButtonState.Pressed))
