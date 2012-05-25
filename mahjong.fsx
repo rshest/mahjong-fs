@@ -7,6 +7,7 @@
 #r "System.Xaml"
 
 open System
+open System.ComponentModel
 open System.Windows
 open System.Windows.Controls
 open System.Windows.Shapes
@@ -84,6 +85,18 @@ let getStoneLocation (i, j, layer) =
 //============================================================================================
 //  UI/Drawing
 //============================================================================================
+type PropertyChanged() =
+  let event = Event<_, _>()
+ 
+  interface INotifyPropertyChanged with
+    [<CLIEvent>]
+    member x.PropertyChanged = event.Publish
+    
+  member this.trigger obj name = 
+    event.Trigger(obj, PropertyChangedEventArgs(name))
+
+let propChanged = PropertyChanged()
+
 //  returns the full path of a file located in the same directory as the script
 let fullPath file = __SOURCE_DIRECTORY__ + "/"+ file
 
@@ -311,8 +324,22 @@ type Game =
     StoneStates: StoneState[]
     StoneControls:(Rectangle*Rectangle)[] 
     mutable Moves:int list
-    mutable CurSelected:int option
-    mutable NumHiddenLayers: int } 
+    mutable curSelected:int option
+    mutable NumHiddenLayers: int } with
+
+    member this.CurSelected
+      with get() = this.curSelected
+      and  set(v) = 
+        this.curSelected <- v; 
+        propChanged.trigger this "CurSelected"
+        propChanged.trigger this "CurLanguage"
+
+    member this.CurLanguage = 
+      match this.curSelected with
+      | Some(s) ->
+        let _, lang = languages.[this.StoneIDs.[s]]
+        lang
+      | _ -> "XAXAXAX"
 
 let newGame layoutID =
   let coords = layouts.[layoutID]
@@ -328,13 +355,14 @@ let newGame layoutID =
     |> createStoneControls
   { StoneCoords =  coords
     StoneStates = states
-    CurSelected = None
+    curSelected = None
     Moves = []
     StoneIDs = ids
     NumHiddenLayers = 0
     StoneControls = controls }
 
 let mutable game = newGame ((new System.Random()).Next(0, Array.length layouts))
+window.DataContext <- game
 
 let updateStoneControls () =
   game.StoneStates 
@@ -397,9 +425,9 @@ let removeStonePair s1 s2 =
 let selectStone s =
   setStoneState Selected s
   game.CurSelected <- Some(s)
-  let url, lang = languages.[game.StoneIDs.[s]]
-  let status = window.FindName("StoneName") :?> TextBlock
-  status.Text <- lang
+  //let url, lang = languages.[game.StoneIDs.[s]]
+  //let status = window.FindName("StoneName") :?> TextBlock
+  //status.Text <- lang
 
 let handleClick (mx, my) = 
   let stone = match pickStone mx my with

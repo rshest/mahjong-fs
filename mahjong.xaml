@@ -45,7 +45,8 @@
             </ControlTemplate>
           </Button.Template>
           <TextBlock Name="StoneName" Cursor="Hand" VerticalAlignment="Bottom"
-                     Foreground="Blue" TextDecorations="Underline"/>
+                     Foreground="Blue" TextDecorations="Underline"
+                     Text="{Binding CurLanguage}"/>
         </Button>
       </StatusBarItem>
     </StatusBar>
