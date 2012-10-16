@@ -65,14 +65,38 @@ module Array =
     for i in [0..(numTimes - 1)] do Array.blit arr 0 res (i*numElem) numElem 
     res
 
+//============================================================================================
+//  Data structures
+//============================================================================================
+type SpriteAtlas = { 
+  File: string;
+  Cols: int;
+  Rows: int;
+  FrameWidth: float;
+  FrameHeight: float; 
+}
+
 type StoneState =
   | Visible
   | Selected
   | Hidden
 
+//============================================================================================
+//  Hardcoded constants
+//============================================================================================
+let STONE_EXTENTS = 66., 78.
+let STONE_3D_OFFSET = -7., -11.
 
-let STONE_EXTENTS = 64., 75.
-let STONE_3D_OFFSET = -7., -10.
+let MAIN_WINDOW_XAML = "mahjong.xaml"
+let LAYOUTS_FILE = "layouts.txt"
+let LANGUAGES_FILE = "languages.txt"
+
+let BG_ATLAS = { File = "stones_bg.png"; Cols = 2; Rows = 1; FrameWidth = 75.; FrameHeight = 90.; }
+let FG_ATLAS = { File = "stones_fg.png"; Cols = 12; Rows = 10; FrameWidth = 64.; FrameHeight = 60.; }
+
+let MAX_ARRANGE_ATTEMPTS = 50
+let ABOUT_URL = @"http://en.wikipedia.org/wiki/Mahjong_solitaire"
+
 
 let getStoneLocation (i, j, layer) =
   let lx, ly = STONE_3D_OFFSET
@@ -91,16 +115,8 @@ let loadXamlWindow (filename:string) =
   let reader = XmlReader.Create(filename)
   XamlReader.Load(reader) :?> Window
 
-let window = loadXamlWindow(fullPath "mahjong.xaml")
+let window = loadXamlWindow(fullPath MAIN_WINDOW_XAML)
 window.Show()
-
-type SpriteAtlas = { 
-  File: string;
-  Cols: int;
-  Rows: int;
-  FrameWidth: float;
-  FrameHeight: float; 
-}
 
 let spriteBrush atlas id =
   let imgSource = new BitmapImage(new Uri(fullPath atlas.File))
@@ -109,29 +125,26 @@ let spriteBrush atlas id =
                          stoneH*(float (id / atlas.Cols)), stoneW, stoneH)
   new ImageBrush(ImageSource = imgSource, Viewbox = viewBox)
 
-let bgAtlas = { File = "stones_bg.png"; Cols = 2; Rows = 1; FrameWidth = 74.; FrameHeight = 85.; }
-let fgAtlas = { File = "stones_fg.png"; Cols = 12; Rows = 10; FrameWidth = 64.; FrameHeight = 60.; }
-
 let updateStoneControl stoneControl id state = 
   let (bg:Rectangle), (fg:Rectangle) = stoneControl
   let spriteID = if state = Selected then 1 else 0
-  let selBrush = spriteBrush bgAtlas spriteID
+  let selBrush = spriteBrush BG_ATLAS spriteID
   match state with
   | Hidden -> bg.Fill <- null; fg.Fill <- null
   | _ -> bg.Fill <- selBrush
   let imgBrush = 
     match state with
     | Hidden -> null
-    | _ -> spriteBrush fgAtlas id
+    | _ -> spriteBrush FG_ATLAS id
   fg.Fill <- imgBrush
 
 let createStoneControls stoneDataArr =
   let createControlPair (id, (i, j, layer)) =
     let (x, y, _, _) = getStoneLocation(i, j, layer)
-    let bg = new Rectangle(Width=bgAtlas.FrameWidth, Height=bgAtlas.FrameHeight)
+    let bg = new Rectangle(Width = BG_ATLAS.FrameWidth, Height = BG_ATLAS.FrameHeight)
     Canvas.SetLeft(bg, x)
     Canvas.SetTop(bg, y)   
-    let fg = new Rectangle(Width=fgAtlas.FrameWidth, Height=fgAtlas.FrameHeight)
+    let fg = new Rectangle(Width = FG_ATLAS.FrameWidth, Height = FG_ATLAS.FrameHeight)
     Canvas.SetLeft(fg, x + 2.)
     Canvas.SetTop(fg, y + 10.)
     let controls = (bg, fg)
@@ -185,7 +198,7 @@ let layouts =
   let splitSections (res, s) (line:string) = 
     if line.StartsWith("-") then (s::res, "") else (res, s + "\n" + line)
   seq {
-      use sr = new StreamReader(fullPath "layouts.txt")
+      use sr = new StreamReader(fullPath LAYOUTS_FILE)
       while not sr.EndOfStream do yield sr.ReadLine()
   } |> Seq.fold splitSections ([],"") 
     |> fst 
@@ -198,7 +211,7 @@ let layouts =
 
 let languages = 
   seq {
-        use sr = new StreamReader(fullPath "languages.txt")
+        use sr = new StreamReader(fullPath LANGUAGES_FILE)
         while not sr.EndOfStream do yield sr.ReadLine()
     } 
     |> Seq.map (fun s -> s.Trim().Split('|'))
@@ -274,8 +287,6 @@ let tryArrangeSolvable (coords:(int*int*int)[]) (stoneTypes:int[]) =
   let numStones = Seq.length stoneTypes
   if ids.Length <> numStones then None else Some ids
 
-let MAX_ARRANGE_ATTEMPTS = 50
-
 let shuffleVisible coords (ids:int[]) (states:StoneState[]) shuffleFn =
   let isVisible = (function | i, id when states.[i] = Visible -> Some id | _ -> None)
   let shuffled = 
@@ -288,7 +299,10 @@ let shuffleVisible coords (ids:int[]) (states:StoneState[]) shuffleFn =
     |> Array.zip3 states [|0..(states.Length - 1)|] 
     |> Array.filter (fun (st, _, _) -> st = Visible)
     |> Array.iteri (fun i (_, idx, _) -> ids.[idx] <- s.[i])
-  | None -> MessageBox.Show "Not possible to create solvable position!" |> ignore
+    true
+  | None -> 
+    MessageBox.Show "Not possible to create solvable position!" |> ignore
+    false
 
 let getMaxLayer coords = 
   let  _, _, m = coords |> Array.maxBy (fun (_, _, h) -> h)
@@ -297,21 +311,13 @@ let getMaxLayer coords =
 //============================================================================================
 //  Game logic, imperative style
 //============================================================================================
-type Stone =
- { Coords:    int*int*int   //  coordinates on the board, (i, j, layer)
-   ID:        int           //  face ID
-   
-   mutable State:       StoneState    //  current state
-   mutable IsHidden:    bool
- }
-
 type Game = 
   { StoneCoords: (int*int*int)[]
     StoneIDs: int[]
     StoneStates: StoneState[]
-    StoneControls:(Rectangle*Rectangle)[] 
-    mutable Moves:int list
-    mutable CurSelected:int option
+    StoneControls: (Rectangle*Rectangle)[] 
+    mutable Moves: int list
+    mutable CurSelected: int option
     mutable NumHiddenLayers: int } 
 
 let newGame layoutID =
@@ -321,7 +327,7 @@ let newGame layoutID =
     [|0..(Array.length languages - 1)|] 
     |> Array.shuffle 
     |> Array.replicate 0 ((Array.length coords)/4) 4
-  shuffleVisible coords ids states tryArrangeSolvable
+  shuffleVisible coords ids states tryArrangeSolvable |> ignore
   let controls = 
     coords
     |> Array.zip ids
@@ -341,8 +347,9 @@ let updateStoneControls () =
   |> Array.iteri (fun i state -> updateStoneControl game.StoneControls.[i] game.StoneIDs.[i] state)
 
 let shuffleStones shuffleFn = 
-  shuffleVisible game.StoneCoords game.StoneIDs game.StoneStates shuffleFn
+  let shuffled = shuffleVisible game.StoneCoords game.StoneIDs game.StoneStates shuffleFn
   updateStoneControls()
+  shuffled
 
 let setStoneState state idx =
   game.StoneStates.[idx] <- state
@@ -390,10 +397,13 @@ let removeStonePair s1 s2 =
     MessageBox.Show "Amazing, you've won in this impossible game!" |> ignore
     game <- newGame 0
   elif ((getMatches game.StoneIDs game.StoneCoords game.StoneStates).Length = 0) then 
-    MessageBox.Show "No more possible Moves. You've lost, sorry" |> ignore
-    shuffleStones tryArrangeSolvable
-    updateStoneControls()
-
+    if (shuffleStones tryArrangeSolvable) then
+      MessageBox.Show "No more possible moves. Shuffling the remaining stones." |> ignore
+    else
+      MessageBox.Show "No more possible moves and not possible to shuffle." |> ignore
+      game <- newGame ((new System.Random()).Next(0, Array.length layouts))
+      window.DataContext <- game
+      
 let selectStone s =
   setStoneState Selected s
   game.CurSelected <- Some(s)
@@ -410,8 +420,6 @@ let handleClick (mx, my) =
   | Some c, Some s when game.StoneIDs.[c] = game.StoneIDs.[s] -> removeStonePair c s
   | Some c, None -> selectStone c
   | _, _ -> unselectAll ()
-
-
 
 let startGame id = 
   fun _ -> game <- newGame id; window.DataContext <- game
@@ -431,11 +439,9 @@ let bindMenuItem (name, fn) =
   let menuItem = window.FindName(name) :?> MenuItem
   menuItem.Click.Add(fun _ -> fn ())
 
-let ABOUT_URL = @"http://en.wikipedia.org/wiki/Mahjong_solitaire"
-
 [ "MenuUndo", undoMove
-  "MenuShuffleSolvable", fun _ -> shuffleStones tryArrangeSolvable
-  "MenuShuffle", fun _ -> shuffleStones arrangeRandom
+  "MenuShuffleSolvable", fun _ -> shuffleStones tryArrangeSolvable |> ignore
+  "MenuShuffle", fun _ -> shuffleStones arrangeRandom |> ignore
   "MenuShowFree", showFreeStones
   "MenuShowMatches", showMatchingStones
   "MenuHideLayer", fun _ -> hideLayers 1

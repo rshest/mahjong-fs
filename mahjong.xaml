@@ -1,6 +1,6 @@
 ﻿<Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="F#/WPF Mahjong Solitaire" Background="Gray" Width="1024" Height="768">
+        Title="F#/WPF Mahjong Solitaire" Background="#4f3d22" Width="1024" Height="768">
   <Grid>
     <Grid.RowDefinitions>
       <RowDefinition Height="Auto"/>
