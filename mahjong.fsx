@@ -17,7 +17,7 @@ open System.Xml
 open System.IO
 
 //============================================================================================
-//  General utils
+//  General utility functions
 //============================================================================================
 module Utils =
   
@@ -65,6 +65,9 @@ module Array =
     for i in [0..(numTimes - 1)] do Array.blit arr 0 res (i*numElem) numElem 
     res
 
+//  returns the full path of a file located in the same directory as the script
+let fullPath file = __SOURCE_DIRECTORY__ + "/"+ file
+
 //============================================================================================
 //  Data structures
 //============================================================================================
@@ -82,7 +85,7 @@ type StoneState =
   | Hidden
 
 //============================================================================================
-//  Hardcoded constants
+//  Global constants
 //============================================================================================
 let STONE_EXTENTS = 66., 78.
 let STONE_3D_OFFSET = -7., -11.
@@ -97,74 +100,8 @@ let FG_ATLAS = { File = "stones_fg.png"; Cols = 12; Rows = 10; FrameWidth = 64.;
 let MAX_ARRANGE_ATTEMPTS = 50
 let ABOUT_URL = @"http://en.wikipedia.org/wiki/Mahjong_solitaire"
 
-
-let getStoneLocation (i, j, layer) =
-  let lx, ly = STONE_3D_OFFSET
-  let sx, sy = STONE_EXTENTS
-  let x = (float i)*sx*0.5 + (float layer)*lx
-  let y = (float j)*sy*0.5 + (float layer)*ly
-  (x, y, sx - lx, sy - ly)
-
 //============================================================================================
-//  UI/Drawing
-//============================================================================================
-//  returns the full path of a file located in the same directory as the script
-let fullPath file = __SOURCE_DIRECTORY__ + "/"+ file
-
-let loadXamlWindow (filename:string) =
-  let reader = XmlReader.Create(filename)
-  XamlReader.Load(reader) :?> Window
-
-let window = loadXamlWindow(fullPath MAIN_WINDOW_XAML)
-window.Show()
-
-let spriteBrush atlas id =
-  let imgSource = new BitmapImage(new Uri(fullPath atlas.File))
-  let stoneW, stoneH = 1./(float atlas.Cols), 1./(float atlas.Rows)
-  let viewBox = new Rect(stoneW*(float (id % atlas.Cols)), 
-                         stoneH*(float (id / atlas.Cols)), stoneW, stoneH)
-  new ImageBrush(ImageSource = imgSource, Viewbox = viewBox)
-
-let updateStoneControl stoneControl id state = 
-  let (bg:Rectangle), (fg:Rectangle) = stoneControl
-  let spriteID = if state = Selected then 1 else 0
-  let selBrush = spriteBrush BG_ATLAS spriteID
-  match state with
-  | Hidden -> bg.Fill <- null; fg.Fill <- null
-  | _ -> bg.Fill <- selBrush
-  let imgBrush = 
-    match state with
-    | Hidden -> null
-    | _ -> spriteBrush FG_ATLAS id
-  fg.Fill <- imgBrush
-
-let createStoneControls stoneDataArr =
-  let createControlPair (id, (i, j, layer)) =
-    let (x, y, _, _) = getStoneLocation(i, j, layer)
-    let bg = new Rectangle(Width = BG_ATLAS.FrameWidth, Height = BG_ATLAS.FrameHeight)
-    Canvas.SetLeft(bg, x)
-    Canvas.SetTop(bg, y)   
-    let fg = new Rectangle(Width = FG_ATLAS.FrameWidth, Height = FG_ATLAS.FrameHeight)
-    Canvas.SetLeft(fg, x + 2.)
-    Canvas.SetTop(fg, y + 10.)
-    let controls = (bg, fg)
-    updateStoneControl controls id Visible
-    controls
-
-  let canvas = window.FindName("BoardCanvas") :?> Canvas
-  canvas.Children.Clear()
-  stoneDataArr 
-    |> Array.map createControlPair 
-    |> Array.map (fun (bg, fg) -> 
-                    canvas.Children.Add(bg) |> ignore
-                    canvas.Children.Add(fg) |> ignore
-                    (bg, fg))
-
-let setStoneOpacity opacity (fg:Rectangle, bg:Rectangle) =
-    fg.Opacity <- opacity; bg.Opacity <- opacity;
-
-//============================================================================================
-//  Loading game data from the text files  
+//  Loading game data from files  
 //============================================================================================
 let parseLayout (str:string) =   
   let charToLayer ch = 
@@ -309,7 +246,69 @@ let getMaxLayer coords =
   m
   
 //============================================================================================
-//  Game logic, imperative style
+//  UI/Drawing
+//============================================================================================
+let getStoneLocation (i, j, layer) =
+  let lx, ly = STONE_3D_OFFSET
+  let sx, sy = STONE_EXTENTS
+  let x = (float i)*sx*0.5 + (float layer)*lx
+  let y = (float j)*sy*0.5 + (float layer)*ly
+  (x, y, sx - lx, sy - ly)
+
+let loadXamlWindow (filename:string) =
+  let reader = XmlReader.Create(filename)
+  XamlReader.Load(reader) :?> Window
+
+let window = loadXamlWindow(fullPath MAIN_WINDOW_XAML)
+window.Show()
+
+let spriteBrush atlas id =
+  let imgSource = new BitmapImage(new Uri(fullPath atlas.File))
+  let stoneW, stoneH = 1./(float atlas.Cols), 1./(float atlas.Rows)
+  let viewBox = new Rect(stoneW*(float (id % atlas.Cols)), 
+                         stoneH*(float (id / atlas.Cols)), stoneW, stoneH)
+  new ImageBrush(ImageSource = imgSource, Viewbox = viewBox)
+
+let updateStoneControl stoneControl id state = 
+  let (bg:Rectangle), (fg:Rectangle) = stoneControl
+  let spriteID = if state = Selected then 1 else 0
+  let selBrush = spriteBrush BG_ATLAS spriteID
+  match state with
+  | Hidden -> bg.Fill <- null; fg.Fill <- null
+  | _ -> bg.Fill <- selBrush
+  let imgBrush = 
+    match state with
+    | Hidden -> null
+    | _ -> spriteBrush FG_ATLAS id
+  fg.Fill <- imgBrush
+
+let createStoneControls stoneDataArr =
+  let createControlPair (id, (i, j, layer)) =
+    let (x, y, _, _) = getStoneLocation(i, j, layer)
+    let bg = new Rectangle(Width = BG_ATLAS.FrameWidth, Height = BG_ATLAS.FrameHeight)
+    Canvas.SetLeft(bg, x)
+    Canvas.SetTop(bg, y)   
+    let fg = new Rectangle(Width = FG_ATLAS.FrameWidth, Height = FG_ATLAS.FrameHeight)
+    Canvas.SetLeft(fg, x + 2.)
+    Canvas.SetTop(fg, y + 10.)
+    let controls = (bg, fg)
+    updateStoneControl controls id Visible
+    controls
+
+  let canvas = window.FindName("BoardCanvas") :?> Canvas
+  canvas.Children.Clear()
+  stoneDataArr 
+    |> Array.map createControlPair 
+    |> Array.map (fun (bg, fg) -> 
+                    canvas.Children.Add(bg) |> ignore
+                    canvas.Children.Add(fg) |> ignore
+                    (bg, fg))
+
+let setStoneOpacity opacity (fg:Rectangle, bg:Rectangle) =
+    fg.Opacity <- opacity; bg.Opacity <- opacity;
+
+//============================================================================================
+//  Game logic (imperative style)
 //============================================================================================
 type Game = 
   { StoneCoords: (int*int*int)[]
@@ -342,13 +341,14 @@ let newGame layoutID =
 
 let mutable game = newGame ((new System.Random()).Next(0, Array.length layouts))
 
-let updateStoneControls () =
-  game.StoneStates 
-  |> Array.iteri (fun i state -> updateStoneControl game.StoneControls.[i] game.StoneIDs.[i] state)
+let startGame id = 
+  fun _ -> game <- newGame id; window.DataContext <- game
 
 let shuffleStones shuffleFn = 
   let shuffled = shuffleVisible game.StoneCoords game.StoneIDs game.StoneStates shuffleFn
-  updateStoneControls()
+  //  update stone controls
+  game.StoneStates 
+  |> Array.iteri (fun i state -> updateStoneControl game.StoneControls.[i] game.StoneIDs.[i] state)
   shuffled
 
 let setStoneState state idx =
@@ -359,12 +359,6 @@ let undoMove () =
   match game.Moves with
   | a::b::rest -> game.Moves <- rest; setStoneState Visible a; setStoneState Visible b;
   | _ -> ()
-
-let pickStone mx my = 
-    game.StoneCoords 
-    |> Array.map getStoneLocation
-    |> Array.tryFindLastIndexi (fun n (x, y, w, h) -> 
-      game.StoneStates.[n] <> Hidden && mx > x && my > y && mx < x + w && my < y + h)
 
 let unselectAll () = 
     game.CurSelected <- None
@@ -378,7 +372,8 @@ let hideLayers delta =
   if newHiddenLayers >= 0 && newHiddenLayers < maxLayer then
     game.NumHiddenLayers <- newHiddenLayers
     game.StoneCoords |> Array.iteri (fun i (_, _, h) -> 
-      setStoneOpacity (if h <= maxLayer - newHiddenLayers then 1.0 else 0.2) game.StoneControls.[i])
+      let alpha = (if h <= maxLayer - newHiddenLayers then 1.0 else 0.2)
+      setStoneOpacity alpha game.StoneControls.[i])
 
 let showFreeStones () =  
   unselectAll ()
@@ -411,29 +406,34 @@ let selectStone s =
   let status = window.FindName("StoneName") :?> TextBlock
   status.Text <- lang
 
-let handleClick (mx, my) = 
-  let stone = match pickStone mx my with
+let clickStone stone = 
+  let s = match stone with
               | Some stoneIdx when (isFree game.StoneCoords game.StoneStates stoneIdx) -> Some stoneIdx
               | _ -> None
-  match stone, game.CurSelected with
+  match s, game.CurSelected with
   | Some c, Some s when c = s -> unselectAll ()
   | Some c, Some s when game.StoneIDs.[c] = game.StoneIDs.[s] -> removeStonePair c s
   | Some c, None -> selectStone c
   | _, _ -> unselectAll ()
 
-let startGame id = 
-  fun _ -> game <- newGame id; window.DataContext <- game
+//============================================================================================
+//  UI/Input
+//============================================================================================
+let handleMouseClick (mx, my) = 
+  let stone = 
+    game.StoneCoords 
+    |> Array.map getStoneLocation
+    |> Array.tryFindLastIndexi (fun n (x, y, w, h) -> 
+      game.StoneStates.[n] <> Hidden && mx > x && my > y && mx < x + w && my < y + h)
+  clickStone stone
 
-//============================================================================================
-//  User Input
-//============================================================================================
 let events = 
   let canvas = window.FindName("BoardCanvas") :?> Canvas
   window.MouseDown
   |> Event.filter (fun mi -> (mi.ChangedButton = Input.MouseButton.Left && 
                               mi.ButtonState = Input.MouseButtonState.Pressed))
   |> Event.map (fun mi -> (mi.GetPosition(canvas).X, mi.GetPosition(canvas).Y))
-  |> Event.add handleClick
+  |> Event.add handleMouseClick
 
 let bindMenuItem (name, fn) =
   let menuItem = window.FindName(name) :?> MenuItem
