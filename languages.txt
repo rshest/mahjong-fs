@@ -126,3 +126,4 @@ http://en.wikipedia.org/wiki/JADE_(programming_language)|Jade
 http://en.wikipedia.org/wiki/Pike_(programming_language)|Pike
 http://orc.csres.utexas.edu|Orc
 http://www.cs.cornell.edu/jif|Jif
+http://en.wikipedia.org/wiki/Oxygene_(programming_language)|Oxygene
