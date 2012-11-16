@@ -72,11 +72,11 @@ let fullPath file = __SOURCE_DIRECTORY__ + "/"+ file
 //  Data structures
 //============================================================================================
 type SpriteAtlas = { 
-  File: string;
-  Cols: int;
-  Rows: int;
-  FrameWidth: float;
-  FrameHeight: float; 
+  File: string
+  Cols: int
+  Rows: int
+  FrameWidth: float
+  FrameHeight: float 
 }
 
 type StoneState =
@@ -84,6 +84,16 @@ type StoneState =
   | Selected
   | Hidden
 
+type Game = { 
+  StoneCoords: (int*int*int)[]
+  StoneIDs: int[]
+  StoneStates: StoneState[]
+  StoneControls: (Rectangle*Rectangle)[] 
+  mutable Moves: int list
+  mutable CurSelected: int option
+  mutable NumHiddenLayers: int 
+}
+ 
 //============================================================================================
 //  Global constants
 //============================================================================================
@@ -310,15 +320,6 @@ let setStoneOpacity opacity (fg:Rectangle, bg:Rectangle) =
 //============================================================================================
 //  Game logic (imperative style)
 //============================================================================================
-type Game = 
-  { StoneCoords: (int*int*int)[]
-    StoneIDs: int[]
-    StoneStates: StoneState[]
-    StoneControls: (Rectangle*Rectangle)[] 
-    mutable Moves: int list
-    mutable CurSelected: int option
-    mutable NumHiddenLayers: int } 
-
 let newGame layoutID =
   let coords = layouts.[layoutID]
   let states = Array.init coords.Length (fun _ -> Visible)
@@ -342,7 +343,8 @@ let newGame layoutID =
 let mutable game = newGame ((new System.Random()).Next(0, Array.length layouts))
 
 let startGame id = 
-  fun _ -> game <- newGame id; window.DataContext <- game
+  fun _ -> game <- newGame id
+
 
 let shuffleStones shuffleFn = 
   let shuffled = shuffleVisible game.StoneCoords game.StoneIDs game.StoneStates shuffleFn
@@ -390,23 +392,23 @@ let removeStonePair s1 s2 =
   game.Moves <- s1::s2::game.Moves;
   if (game.StoneStates |> Array.forall (fun st -> st = Hidden)) then 
     MessageBox.Show "Amazing, you've won in this impossible game!" |> ignore
-    game <- newGame 0
+    startGame 0 |> ignore
   elif ((getMatches game.StoneIDs game.StoneCoords game.StoneStates).Length = 0) then 
     if (shuffleStones tryArrangeSolvable) then
       MessageBox.Show "No more possible moves. Shuffling the remaining stones." |> ignore
     else
       MessageBox.Show "No more possible moves and not possible to shuffle." |> ignore
-      game <- newGame ((new System.Random()).Next(0, Array.length layouts))
-      window.DataContext <- game
+      startGame 0 |> ignore
       
-let selectStone s =
-  setStoneState Selected s
-  game.CurSelected <- Some(s)
-  let url, lang = languages.[game.StoneIDs.[s]]
-  let status = window.FindName("StoneName") :?> TextBlock
-  status.Text <- lang
+
 
 let clickStone stone = 
+  let selectStone s =
+    setStoneState Selected s
+    game.CurSelected <- Some(s)
+    let url, lang = languages.[game.StoneIDs.[s]]
+    let status = window.FindName("StoneName") :?> TextBlock
+    status.Text <- lang
   let s = match stone with
               | Some stoneIdx when (isFree game.StoneCoords game.StoneStates stoneIdx) -> Some stoneIdx
               | _ -> None
