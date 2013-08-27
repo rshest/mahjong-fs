@@ -151,5 +151,11 @@ http://en.wikipedia.org/wiki/X10_(programming_language)|X10
 http://www.typescriptlang.org|TypeScript
 http://en.wikipedia.org/wiki/Oberon_(programming_language)|Oberon
 http://en.wikipedia.org/wiki/Pascal_(programming_language)|Pascal
-http://en.wikipedia.org/wiki/Hlsl
+http://en.wikipedia.org/wiki/Hlsl|HLSL
 http://en.wikipedia.org/wiki/AWK|AWK
+
+http://en.wikipedia.org/wiki/Assembly_programming|Assembly
+http://en.wikipedia.org/wiki/ColdFusion|ColdFusion
+http://en.wikipedia.org/wiki/ActionScript|ActionScript
+http://en.wikipedia.org/wiki/Fortress_(programming_language)|Fortress
+http://en.wikipedia.org/wiki/Elm_(programming_language)|Elm
