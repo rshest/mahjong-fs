@@ -159,3 +159,10 @@ http://en.wikipedia.org/wiki/ColdFusion|ColdFusion
 http://en.wikipedia.org/wiki/ActionScript|ActionScript
 http://en.wikipedia.org/wiki/Fortress_(programming_language)|Fortress
 http://en.wikipedia.org/wiki/Elm_(programming_language)|Elm
+http://en.wikipedia.org/wiki/ALGOL_68|ALGOL68
+http://en.wikipedia.org/wiki/Scilab|Scilab
+http://en.wikipedia.org/wiki/Objective-J|Objective-J
+http://www.ecere.com/technologies.html|eC
+http://en.wikipedia.org/wiki/Augeas_(software)|Augeas
+http://en.wikipedia.org/wiki/Vhdl|VHDL
+http://www.red-lang.org/|Red
