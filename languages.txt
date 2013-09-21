@@ -10,6 +10,7 @@ http://en.wikipedia.org/wiki/Powershell|PowerShell
 http://en.wikipedia.org/wiki/Go_(programming_language)|Go
 http://en.wikipedia.org/wiki/Python_(programming_language)|Python
 http://inform7.com/|Inform7
+http://en.wikipedia.org/wiki/Xtend_(programming_language)|Xtend
 
 http://en.wikipedia.org/wiki/Haskell_(programming_language)|Haskell
 http://en.wikipedia.org/wiki/Java_(programming_language)|Java
@@ -23,6 +24,7 @@ http://en.wikipedia.org/wiki/Squirrel_(programming_language)|Squirrel
 http://www.ps.uni-saarland.de/alice/|AliceML
 http://en.wikipedia.org/wiki/Logo_(programming_language)|Logo
 http://en.wikipedia.org/wiki/OpenCL|OpenCL
+http://en.wikipedia.org/wiki/Fancy_(programming_language)|Fancy
 
 http://en.wikipedia.org/wiki/Perl_6|Perl6
 http://en.wikipedia.org/wiki/Tcl|Tcl
@@ -36,6 +38,7 @@ http://en.wikipedia.org/wiki/Visual_Basic_for_Applications|VBA
 http://en.wikipedia.org/wiki/Nemerle|Nemerle
 http://en.wikipedia.org/wiki/Prolog|Prolog
 http://en.wikipedia.org/wiki/F_Sharp_%28programming_language%29|F#
+http://supercollider.sourceforge.net/|SuperCollider
 
 http://en.wikipedia.org/wiki/Php|PHP
 http://en.wikipedia.org/wiki/Oz_(programming_language)|Oz
@@ -49,6 +52,7 @@ http://coq.inria.fr/a-short-introduction-to-coq|Coq
 http://en.wikipedia.org/wiki/Ecmascript|ECMAScript
 http://en.wikipedia.org/wiki/Icon_(programming_language)|Icon
 http://en.wikipedia.org/wiki/Matlab|MATLAB
+http://en.wikipedia.org/wiki/Fantom_(programming_language)|Fantom
 
 http://en.wikipedia.org/wiki/Fortran|Fortran
 http://en.wikipedia.org/wiki/Curl_(programming_language)|Curl
@@ -62,6 +66,7 @@ http://en.wikipedia.org/wiki/Squeak|Squeak
 http://en.wikipedia.org/wiki/Ocaml|OCaml
 http://en.wikipedia.org/wiki/Javascript|JavaScript
 http://www.cis.upenn.edu/~bcpierce/papers/pict/Html/Pict.html|Pict
+http://en.wikipedia.org/wiki/Agda_(programming_language)|Agda
 
 http://en.wikipedia.org/wiki/Subtext_%28programming_language%29|Subtext
 http://research.microsoft.com/en-us/projects/kodu/|Kodu
@@ -75,6 +80,7 @@ http://en.wikipedia.org/wiki/Snobol|SNOBOL
 http://en.wikipedia.org/wiki/Falcon_(programming_language)|Falcon
 http://en.wikipedia.org/wiki/PostScript|Postscript
 http://en.wikipedia.org/wiki/SISAL|SISAL
+http://logtalk.org/|Logtalk
 
 http://www.contextfreeart.org/|CFDG
 http://en.wikipedia.org/wiki/Arc_(programming_language)|Arc
@@ -88,6 +94,7 @@ http://en.wikipedia.org/wiki/AppleScript|AppleScript
 http://en.wikipedia.org/wiki/Bash_(Unix_shell)|Bash
 http://dtai.cs.kuleuven.be/projects/ALP/newsletter/nov06/content/Systems/content.html|Ciao
 http://en.wikipedia.org/wiki/Objective-C|Objective-C
+http://en.wikipedia.org/wiki/ABAP|ABAP
 
 http://coffeescript.org|CoffeeScript
 http://udn.epicgames.com/Three/UnrealScriptReference.html|UnrealScript
@@ -101,6 +108,7 @@ http://haxe.org/|haXe
 http://www.shenlanguage.org/|Shen
 http://en.wikipedia.org/wiki/APL_(programming_language)|APL
 http://daimi.au.dk/~beta/|BETA
+http://livescript.net|LiveScript
 
 http://www.cs.washington.edu/research/zpl/home/|ZPL
 http://sourceforge.net/projects/asymptote/|Asymptote
@@ -114,6 +122,7 @@ http://en.wikipedia.org/wiki/Scumm|SCUMM
 http://en.wikipedia.org/wiki/Racket_(programming_language)|Racket
 http://en.wikipedia.org/wiki/Vala_(programming_language)|Vala
 http://en.wikipedia.org/wiki/Dark_Basic|DarkBASIC
+http://julialang.org/|Julia
 
 http://programming.nu/index|Nu
 http://en.wikipedia.org/wiki/Arduino|Arduino
@@ -127,6 +136,7 @@ http://en.wikipedia.org/wiki/Pike_(programming_language)|Pike
 http://orc.csres.utexas.edu|Orc
 http://www.cs.cornell.edu/jif|Jif
 http://en.wikipedia.org/wiki/Oxygene_(programming_language)|Oxygene
+http://daovm.net/|Dao
 
 http://processing.org|Processing
 http://chuck.cs.princeton.edu|ChucK
@@ -140,6 +150,7 @@ http://en.wikipedia.org/wiki/Cobol|COBOL
 http://chapel.cray.com|Chapel
 http://openeuphoria.org|Euphoria
 http://elixir-lang.org|Elixir
+http://en.wikipedia.org/wiki/Vhdl|VHDL
 
 http://www.aspectc.org|AspectC++
 http://harbour-project.sourceforge.net|Harbour
@@ -153,6 +164,7 @@ http://en.wikipedia.org/wiki/Oberon_(programming_language)|Oberon
 http://en.wikipedia.org/wiki/Pascal_(programming_language)|Pascal
 http://en.wikipedia.org/wiki/Hlsl|HLSL
 http://en.wikipedia.org/wiki/AWK|AWK
+http://www.red-lang.org/|Red
 
 http://en.wikipedia.org/wiki/Assembly_programming|Assembly
 http://en.wikipedia.org/wiki/ColdFusion|ColdFusion
@@ -164,5 +176,7 @@ http://en.wikipedia.org/wiki/Scilab|Scilab
 http://en.wikipedia.org/wiki/Objective-J|Objective-J
 http://www.ecere.com/technologies.html|eC
 http://en.wikipedia.org/wiki/Augeas_(software)|Augeas
-http://en.wikipedia.org/wiki/Vhdl|VHDL
-http://www.red-lang.org/|Red
+http://en.wikipedia.org/wiki/Limbo_(programming_language)|Limbo
+
+
+
