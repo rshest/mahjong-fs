@@ -105,7 +105,7 @@ let LAYOUTS_FILE = "layouts.txt"
 let LANGUAGES_FILE = "languages.txt"
 
 let BG_ATLAS = { File = "stones_bg.png"; Cols = 2; Rows = 1; FrameWidth = 75.; FrameHeight = 90.; }
-let FG_ATLAS = { File = "stones_fg.png"; Cols = 13; Rows = 13; FrameWidth = 64.; FrameHeight = 60.; }
+let FG_ATLAS = { File = "stones_fg.png"; Cols = 13; Rows = 14; FrameWidth = 64.; FrameHeight = 60.; }
 
 let MAX_ARRANGE_ATTEMPTS = 50
 let ABOUT_URL = @"http://en.wikipedia.org/wiki/Mahjong_solitaire"

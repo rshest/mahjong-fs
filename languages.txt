@@ -177,6 +177,17 @@ http://en.wikipedia.org/wiki/Objective-J|Objective-J
 http://www.ecere.com/technologies.html|eC
 http://en.wikipedia.org/wiki/Augeas_(software)|Augeas
 http://en.wikipedia.org/wiki/Limbo_(programming_language)|Limbo
+http://www.gmscript.com/|GameMonkey
+http://en.wikipedia.org/wiki/AngelScript|AngelScript
 
-
-
+http://en.wikipedia.org/wiki/Swift_(Apple_programming_language)|Swift
+http://en.wikipedia.org/wiki/CLU_(programming_language)|CLU
+http://en.wikipedia.org/wiki/Hack_(programming_language)|Hack
+http://en.wikipedia.org/wiki/Simula|Simula
+http://cobra-language.com|Cobra
+http://ferite.org|Ferite
+http://www.pyret.org|Pyret
+http://nimrod-lang.org|Nimrod
+http://www.ats-lang.org|ATS
+http://roy.brianmckenna.org|Roy
+http://en.wikipedia.org/wiki/DRAKON|DRAKON
