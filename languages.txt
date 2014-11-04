@@ -11,6 +11,9 @@ http://en.wikipedia.org/wiki/Go_(programming_language)|Go
 http://en.wikipedia.org/wiki/Python_(programming_language)|Python
 http://inform7.com/|Inform7
 http://en.wikipedia.org/wiki/Xtend_(programming_language)|Xtend
+https://www.availlang.org|Avail
+http://en.wikipedia.org/wiki/App_Inventor_for_Android|AppInventor
+http://www.flowgorithm.org|Flowgorithm
 
 http://en.wikipedia.org/wiki/Haskell_(programming_language)|Haskell
 http://en.wikipedia.org/wiki/Java_(programming_language)|Java
@@ -25,6 +28,9 @@ http://www.ps.uni-saarland.de/alice/|AliceML
 http://en.wikipedia.org/wiki/Logo_(programming_language)|Logo
 http://en.wikipedia.org/wiki/OpenCL|OpenCL
 http://en.wikipedia.org/wiki/Fancy_(programming_language)|Fancy
+http://tao3d.sourceforge.net|Tao3D
+http://en.wikipedia.org/wiki/AgentSheets|AgentSheets
+http://en.wikipedia.org/wiki/Charm_(programming_language)|Charm
 
 http://en.wikipedia.org/wiki/Perl_6|Perl6
 http://en.wikipedia.org/wiki/Tcl|Tcl
@@ -39,6 +45,10 @@ http://en.wikipedia.org/wiki/Nemerle|Nemerle
 http://en.wikipedia.org/wiki/Prolog|Prolog
 http://en.wikipedia.org/wiki/F_Sharp_%28programming_language%29|F#
 http://supercollider.sourceforge.net/|SuperCollider
+http://en.wikipedia.org/wiki/SETL|SETL
+http://en.wikipedia.org/wiki/Modelica|Modelica
+http://www.marcolavoie.ca/larp/en/default.htm|LARP
+
 
 http://en.wikipedia.org/wiki/Php|PHP
 http://en.wikipedia.org/wiki/Oz_(programming_language)|Oz
@@ -53,6 +63,10 @@ http://en.wikipedia.org/wiki/Ecmascript|ECMAScript
 http://en.wikipedia.org/wiki/Icon_(programming_language)|Icon
 http://en.wikipedia.org/wiki/Matlab|MATLAB
 http://en.wikipedia.org/wiki/Fantom_(programming_language)|Fantom
+http://en.wikipedia.org/wiki/ABC_(programming_language)|ABC
+http://en.wikipedia.org/wiki/HyperTalk|HyperTalk
+http://en.wikipedia.org/wiki/S_(programming_language)|S
+
 
 http://en.wikipedia.org/wiki/Fortran|Fortran
 http://en.wikipedia.org/wiki/Curl_(programming_language)|Curl
@@ -67,6 +81,9 @@ http://en.wikipedia.org/wiki/Ocaml|OCaml
 http://en.wikipedia.org/wiki/Javascript|JavaScript
 http://www.cis.upenn.edu/~bcpierce/papers/pict/Html/Pict.html|Pict
 http://en.wikipedia.org/wiki/Agda_(programming_language)|Agda
+https://github.com/damelang/nile|Nile
+https://code.google.com/p/ufo-language|UFO
+http://en.wikipedia.org/wiki/Whitespace_(programming_language)|Whitespace
 
 http://en.wikipedia.org/wiki/Subtext_%28programming_language%29|Subtext
 http://research.microsoft.com/en-us/projects/kodu/|Kodu
@@ -81,6 +98,9 @@ http://en.wikipedia.org/wiki/Falcon_(programming_language)|Falcon
 http://en.wikipedia.org/wiki/PostScript|Postscript
 http://en.wikipedia.org/wiki/SISAL|SISAL
 http://logtalk.org/|Logtalk
+http://en.wikipedia.org/wiki/Alef_(programming_language)|Alef
+http://www.golfscript.com/golfscript|GolfScript
+http://en.wikipedia.org/wiki/LOLCODE|LOLCODE
 
 http://www.contextfreeart.org/|CFDG
 http://en.wikipedia.org/wiki/Arc_(programming_language)|Arc
@@ -95,6 +115,9 @@ http://en.wikipedia.org/wiki/Bash_(Unix_shell)|Bash
 http://dtai.cs.kuleuven.be/projects/ALP/newsletter/nov06/content/Systems/content.html|Ciao
 http://en.wikipedia.org/wiki/Objective-C|Objective-C
 http://en.wikipedia.org/wiki/ABAP|ABAP
+http://claire3.free.fr|CLAIRE
+http://en.wikipedia.org/wiki/Brainfuck|Brainfuck
+http://bigzaphod.github.io/Taxi|Taxi
 
 http://coffeescript.org|CoffeeScript
 http://udn.epicgames.com/Three/UnrealScriptReference.html|UnrealScript
@@ -109,6 +132,9 @@ http://www.shenlanguage.org/|Shen
 http://en.wikipedia.org/wiki/APL_(programming_language)|APL
 http://daimi.au.dk/~beta/|BETA
 http://livescript.net|LiveScript
+http://en.wikipedia.org/wiki/OPS5|OPS5
+http://bigzaphod.github.io/COW|COW
+http://en.wikipedia.org/wiki/AutoIt|AutoIt
 
 http://www.cs.washington.edu/research/zpl/home/|ZPL
 http://sourceforge.net/projects/asymptote/|Asymptote
@@ -123,6 +149,9 @@ http://en.wikipedia.org/wiki/Racket_(programming_language)|Racket
 http://en.wikipedia.org/wiki/Vala_(programming_language)|Vala
 http://en.wikipedia.org/wiki/Dark_Basic|DarkBASIC
 http://julialang.org/|Julia
+http://en.wikipedia.org/wiki/Escher_(programming_language)|Escher
+https://www.bro.org|Bro
+http://en.wikipedia.org/wiki/Bigwig_(programming_language)|Bigwig
 
 http://programming.nu/index|Nu
 http://en.wikipedia.org/wiki/Arduino|Arduino
@@ -137,6 +166,9 @@ http://orc.csres.utexas.edu|Orc
 http://www.cs.cornell.edu/jif|Jif
 http://en.wikipedia.org/wiki/Oxygene_(programming_language)|Oxygene
 http://daovm.net/|Dao
+http://en.wikipedia.org/wiki/Gremlin_(programming_language)|Gremlin
+http://en.wikipedia.org/wiki/Magik_(programming_language)|Magik
+http://en.wikipedia.org/wiki/Adenine_(programming_language)|Adenine
 
 http://processing.org|Processing
 http://chuck.cs.princeton.edu|ChucK
@@ -151,6 +183,9 @@ http://chapel.cray.com|Chapel
 http://openeuphoria.org|Euphoria
 http://elixir-lang.org|Elixir
 http://en.wikipedia.org/wiki/Vhdl|VHDL
+http://en.wikipedia.org/wiki/Hy|Hy
+http://en.wikipedia.org/wiki/GRASS_(programming_language)|GRASS
+http://en.wikipedia.org/wiki/Pawn_(scripting_language)|Pawn
 
 http://www.aspectc.org|AspectC++
 http://harbour-project.sourceforge.net|Harbour
@@ -165,6 +200,9 @@ http://en.wikipedia.org/wiki/Pascal_(programming_language)|Pascal
 http://en.wikipedia.org/wiki/Hlsl|HLSL
 http://en.wikipedia.org/wiki/AWK|AWK
 http://www.red-lang.org/|Red
+http://en.wikipedia.org/wiki/Modula-3|Modula-3
+http://snap.berkeley.edu|Snap!
+http://en.wikipedia.org/wiki/Xojo|Xojo
 
 http://en.wikipedia.org/wiki/Assembly_programming|Assembly
 http://en.wikipedia.org/wiki/ColdFusion|ColdFusion
@@ -179,6 +217,9 @@ http://en.wikipedia.org/wiki/Augeas_(software)|Augeas
 http://en.wikipedia.org/wiki/Limbo_(programming_language)|Limbo
 http://www.gmscript.com/|GameMonkey
 http://en.wikipedia.org/wiki/AngelScript|AngelScript
+http://en.wikipedia.org/wiki/Modula-2|Modula-2
+http://en.wikipedia.org/wiki/RascalMPL|RascalMPL
+http://strategoxt.org/|Stratego/XT
 
 http://en.wikipedia.org/wiki/Swift_(Apple_programming_language)|Swift
 http://en.wikipedia.org/wiki/CLU_(programming_language)|CLU
@@ -193,6 +234,9 @@ http://en.wikipedia.org/wiki/DRAKON|DRAKON
 http://en.wikipedia.org/wiki/Idris_(programming_language)|Idris
 http://en.wikipedia.org/wiki/Frege_(programming_language)|Frege
 http://code.google.com/p/anic|ANI
+http://en.wikipedia.org/wiki/Pure_Data|PureData
+http://en.wikipedia.org/wiki/Gambas|Gambas
+http://en.wikipedia.org/wiki/Autodesk_3ds_Max|MaxScript
 
 http://www.ats-lang.org|ATS
 http://kittenlang.org|Kitten
@@ -204,6 +248,10 @@ http://en.wikipedia.org/wiki/Friendly_interactive_shell|Fish
 http://www.aplusdev.org|A+
 https://github.com/kevinlawler/kona/wiki|Kona
 http://en.wikipedia.org/wiki/PL/I|PL/I
-http://en.wikipedia.org/wiki/Modula-2|Modula-2
-http://en.wikipedia.org/wiki/Modula-3|Modula-3
-http://en.wikipedia.org/wiki/Hy|Hy
+http://en.wikipedia.org/wiki/Nyquist_(programming_language)|Nyquist
+http://mc-stan.org|Stan
+http://www.rni.helsinki.fi/openbugs|BUGS
+http://en.wikipedia.org/wiki/Hopscotch_(programming_language)|Hopscotch
+http://en.wikipedia.org/wiki/Maya_Embedded_Language|MEL
+http://en.wikipedia.org/wiki/Unity_(game_engine)|UnityScript
+
